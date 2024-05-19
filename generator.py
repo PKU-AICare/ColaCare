@@ -18,7 +18,7 @@ if openai.api_key is None:
 
 class Generator:
     def __init__(self, model_name: str=None, retmax=100):
-        if model_name is not None:
+        if model_name is None:
             self.model = config['model']
         else:
             self.model = model_name
@@ -50,6 +50,7 @@ class Generator:
     
     def generate_answer(self, hcontext):
         keywords = self.generate_keywords(hcontext)
+        keywords = ', '.join(keywords['input'])
         retriver = Retriever(keywords, retmax=self.retmax)
         retrieved_contexts, scores = retriver.get_relevant_documents(hcontext)
         contexts = ["Document [{:d}] (Title: {:s}) {:s}".format(idx, retrieved_contexts[idx]["title"], retrieved_contexts[idx]["abstract"]) for idx in range(len(retrieved_contexts))]
