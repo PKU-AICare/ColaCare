@@ -33,7 +33,7 @@ def run_concare(x: torch.Tensor):
     time_step = x.size()[0]
     if time_step == 1:
         test_x = torch.stack((x, x), axis=0)
-        test_x = torch.tensor(test_x, dtype=torch.float32).to(device)
+        test_x = test_x.to(device=device, dtype=torch.float32)
         test_len = np.array([test_x.size()[1], test_x.size()[1]])
         test_len = torch.tensor(test_len, dtype=torch.int64)
         test_output, context, attn = model_concare(test_x, test_len)
