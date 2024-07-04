@@ -1,14 +1,7 @@
 import os
 import re
 import json
-import tqdm
-import torch
-import time
-import argparse
-import transformers
-from transformers import AutoTokenizer
 import openai
-from transformers import StoppingCriteria, StoppingCriteriaList
 import tiktoken
 import ollama
 from utils import RetrievalSystem
@@ -67,10 +60,10 @@ class RetCare:
         else:
             self.model = llm_name
 
-    def answer(self, hcontext, keywords=None, k=32, rrf_k=100, save_dir = None):
+    def answer(self, hcontext, keywords=None, k=32, rrf_k=100, save_dir=None):
         '''
-        question (str): question to be answered
-        options (Dict[str, str]): options to be chosen from
+        hcontext (str): healthcare context of a patient
+        keywords: list of keywords to retrieve relevant snippets
         k (int): number of snippets to retrieve
         save_dir (str): directory to save the results
         '''
@@ -113,7 +106,7 @@ class RetCare:
 
         return ans, retrieved_snippets, scores, messages
 
-    # @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+    @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
     def generate(self, messages):
         '''
         generate response given messages
