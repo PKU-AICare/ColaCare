@@ -11,22 +11,14 @@ import numpy as np
 corpus_names = {
     "PubMed": ["pubmed"],
     "Textbooks": ["textbooks"],
-    "StatPearls": ["statpearls"],
-    "Wikipedia": ["wikipedia"],
-    "MedCorp": ["pubmed", "textbooks", "statpearls", "wikipedia"],
 }
 
 retriever_names = {
     "BM25": ["bm25"],
-    "Contriever": ["facebook/contriever"],
-    "SPECTER": ["allenai/specter"],
     "MedCPT": ["ncbi/MedCPT-Query-Encoder"],
-    "RRF-2": ["bm25", "ncbi/MedCPT-Query-Encoder"],
-    "RRF-4": ["bm25", "facebook/contriever", "allenai/specter", "ncbi/MedCPT-Query-Encoder"]
 }
 
 class CustomizeSentenceTransformer(SentenceTransformer): # change the default pooling "MEAN" to "CLS"
-
     def _load_auto_model(self, model_name_or_path):
         """
         Creates a simple Transformer + CLS Pooling model and returns the modules
@@ -40,12 +32,7 @@ class CustomizeSentenceTransformer(SentenceTransformer): # change the default po
 def embed(chunk_dir, index_dir, model_name, **kwarg):
 
     save_dir = os.path.join(index_dir, "embedding")
-    
-    if "contriever" in model_name:
-        model = SentenceTransformer(model_name, device="cuda" if torch.cuda.is_available() else "cpu")
-    else:
-        model = CustomizeSentenceTransformer(model_name, device="cuda" if torch.cuda.is_available() else "cpu")
-
+    model = CustomizeSentenceTransformer(model_name, device="cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
 
     fnames = sorted([fname for fname in os.listdir(chunk_dir) if fname.endswith(".jsonl")])
@@ -94,7 +81,6 @@ def construct_index(index_dir, model_name, h_dim=768):
 
 
 class Retriever: 
-
     def __init__(self, retriever_name="ncbi/MedCPT-Query-Encoder", corpus_name="textbooks", db_dir="./corpus", **kwarg):
         self.retriever_name = retriever_name
         self.corpus_name = corpus_name
@@ -135,10 +121,7 @@ class Retriever:
                 self.index = construct_index(index_dir=self.index_dir, model_name=self.retriever_name.replace("Query-Encoder", "Article-Encoder"), h_dim=h_dim)
                 print("[Finished] Corpus indexing finished!")
                 self.metadatas = [json.loads(line) for line in open(os.path.join(self.index_dir, "metadatas.jsonl")).read().strip().split('\n')]            
-            if "contriever" in retriever_name.lower():
-                self.embedding_function = SentenceTransformer(self.retriever_name, device="cuda" if torch.cuda.is_available() else "cpu")
-            else:
-                self.embedding_function = CustomizeSentenceTransformer(self.retriever_name, device="cuda" if torch.cuda.is_available() else "cpu")
+            self.embedding_function = CustomizeSentenceTransformer(self.retriever_name, device="cuda" if torch.cuda.is_available() else "cpu")
             self.embedding_function.eval()
 
     def get_relevant_documents(self, question, k=32, **kwarg):
@@ -169,7 +152,6 @@ class Retriever:
         return [json.loads(open(os.path.join(self.chunk_dir, i["source"]+".jsonl")).read().strip().split('\n')[i["index"]]) for i in indices]
 
 class RetrievalSystem:
-
     def __init__(self, retriever_name="MedCPT", corpus_name="Textbooks", db_dir="./corpus"):
         self.retriever_name = retriever_name
         self.corpus_name = corpus_name
