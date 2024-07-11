@@ -6,7 +6,7 @@ import torch.nn as nn
 import pandas as pd
 
 import models
-from datasets.loader.unpad import unpad_y
+from ehrdatasets.loader.unpad import unpad_y
 from losses import get_loss
 from metrics import get_all_metrics, check_metric_is_better
 from models.utils import generate_mask, get_last_visit
@@ -53,8 +53,9 @@ class DlPipeline(L.LightningModule):
     def forward(self, x, lens):
         if self.model_name == "ConCare":
             x_demo, x_lab, mask = x[:, 0, :self.demo_dim], x[:, :, self.demo_dim:], generate_mask(lens)
-            embedding, decov_loss = self.ehr_encoder(x_lab, x_demo, mask)
+            embedding, decov_loss, feature_weight = self.ehr_encoder(x_lab, x_demo, mask)
             embedding, decov_loss = embedding.to(x.device), decov_loss.to(x.device)
+            self.feature_weight = feature_weight.detach().cpu().numpy()
             self.embedding = embedding
             y_hat = self.head(embedding)
             return y_hat, embedding, decov_loss
@@ -132,11 +133,14 @@ class DlPipeline(L.LightningModule):
         embeddings = torch.cat([torch.nn.functional.pad(x['embeddings'], (0, 0, 0, max([y['embeddings'].shape[1] for y in self.test_step_outputs])-x['embeddings'].shape[1], 0, 0)) for x in self.test_step_outputs])
         pids = []
         pids.extend([x['pids'] for x in self.test_step_outputs])
+        save_dir = f'logs/test/{self.dataset}/{self.model_name}'
+        os.makedirs(save_dir, exist_ok=True)
+        pd.to_pickle(y_pred, os.path.join(save_dir, 'output.pkl'))
+        if self.model_name == 'ConCare':
+            pd.to_pickle(self.feature_weight, os.path.join(save_dir, 'features.pkl'))
         self.test_performance = get_all_metrics(y_pred, y_true, self.task, self.los_info)
         self.test_outputs = {'preds': y_pred, 'labels': y_true, 'lens': lens, 'pids': pids, 'embeddings': embeddings}
         self.test_step_outputs.clear()
-        if not self.calib:
-            pd.to_pickle(y_pred.tolist(), f'/home/wangzixiang/pyehr/datasets/{self.dataset}/processed/{self.model_name}/test_x.pkl')
         return self.test_performance
 
     def configure_optimizers(self):
