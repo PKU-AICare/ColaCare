@@ -1,9 +1,10 @@
 # New
-datasets/
+ehr_datasets/
 config.py
 logs/
 response/
 corpus/
+*.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
