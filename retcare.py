@@ -4,7 +4,7 @@ import json
 import openai
 import tiktoken
 import ollama
-from utils import RetrievalSystem
+from retrieve_utils import RetrievalSystem
 from template import *
 from config import deep_config, tech_config
 from tenacity import (
@@ -38,16 +38,25 @@ def extract_answer(text):
 
 
 class RetCare:
-    def __init__(self, llm_name="OpenAI/gpt-3.5-turbo-16k", ensemble='select', retriever_name="MedCPT", corpus_name="PubMed", db_dir="./corpus", cache_dir=None):
+    def __init__(self, llm_name="OpenAI/gpt-3.5-turbo-16k", ensemble='select', dataset_name='cdsl', retriever_name="MedCPT", corpus_name="PubMed", db_dir="./corpus", cache_dir=None):
         self.llm_name = llm_name
         self.ensemble = ensemble
+        self.dataset_name = dataset_name
         self.retriever_name = retriever_name
         self.corpus_name = corpus_name
         self.db_dir = db_dir
         self.cache_dir = cache_dir
         self.retrieval_system = RetrievalSystem(self.retriever_name, self.corpus_name, self.db_dir)        
-        self.templates = {"ensemble_evaluate_system": ensemble_evaluate_system, "ensemble_evaluate_prompt": ensemble_evaluate_user,
-                    "ensemble_select_system": ensemble_select_system, "ensemble_select_prompt": ensemble_select_user}
+        self.templates = {
+            "ensemble_evaluate_system": {
+                "esrd": ensemble_evaluate_system_esrd
+            }, "ensemble_evaluate_prompt": ensemble_evaluate_user,
+            "ensemble_select_system": {
+                "esrd": ensemble_select_system_esrd, 
+                "icu": ensemble_select_system_icu,
+                "covid": ensemble_select_system_covid
+            }, "ensemble_select_prompt": ensemble_select_user
+        }
         if self.llm_name.split('/')[0].lower() == "openai":
             self.model = self.llm_name.split('/')[-1]
             if "gpt-3.5" in self.model or "gpt-35" in self.model:
@@ -88,6 +97,12 @@ class RetCare:
         if self.ensemble == 'select':
             prompt_user = self.templates["ensemble_select_prompt"].render(context=context, hcontext=hcontext)
             prompt_system = self.templates["ensemble_select_system"]
+            if self.dataset_name == 'cdsl':
+                prompt_system = prompt_system["covid"]
+            elif self.dataset_name == 'ckd':
+                prompt_system = prompt_system["esrd"]
+            else:
+                prompt_system = prompt_system["icu"]
         elif self.ensemble == 'evaluate':
             prompt_user = self.templates["ensemble_prompt"].render(context=context, hcontext=hcontext)
             prompt_system = self.templates["ensemble_system"]
@@ -111,7 +126,7 @@ class RetCare:
         '''
         generate response given messages
         '''
-        if "openai" in self.llm_name.lower():
+        if "openai" in self.llm_name.lower() or "deepseek" in self.llm_name.lower():
             if openai.api_type == "azure":
                 response = openai.ChatCompletion.create(
                     engine=self.model,
@@ -120,7 +135,7 @@ class RetCare:
                 )
             else:
                 response = openai.ChatCompletion.create(
-                    model="deepseek-chat",
+                    model=self.model,
                     messages=messages,
                 )
             ans = response["choices"][0]["message"]["content"]

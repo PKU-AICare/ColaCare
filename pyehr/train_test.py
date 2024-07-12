@@ -55,11 +55,12 @@ def run_dl_experiment(config):
     L.seed_everything(config["seed"]) # seed for reproducibility
 
     # train/val/test
-    pipeline = DlPipeline(config)
     trainer = L.Trainer(accelerator="gpu", devices=[1], max_epochs=config["epochs"], logger=logger, callbacks=[early_stopping_callback, checkpoint_callback], num_sanity_val_steps=0)
-    trainer.fit(pipeline, dm)
     
+    pipeline = DlPipeline(config)
+    trainer.fit(pipeline, dm)
     best_model_path = checkpoint_callback.best_model_path
+    
     pipeline = DlPipeline.load_from_checkpoint(best_model_path, config=config)
     trainer.test(pipeline, dm)
 
