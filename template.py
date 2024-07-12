@@ -66,9 +66,11 @@ Note that the analysis results from the AI model are not all correct. Please thi
     Please evaluate the AI models' prediction results: too low, too high, or reasonable? If it's not reasonable, please provide your own prediction results, represented as a float number between 0 and 1.
 ''')
 
-ensemble_select_system_esrd = '''You are a helpful medical expert with extensive medical knowledge. I will provide you with electronic health data of a End-Stage Renal Disease (ESRD) patient and some analysis results from several AI models. Every model's analysis results include mortality risk and feature importance weight. Your task is to ensemble analysis results of all models and select one result of models as your prediction result based on the relevant documents.'''
+ensemble_select_system_esrd = '''You are a helpful medical expert with extensive medical knowledge. I will provide you with electronic health data of an End-Stage Renal Disease (ESRD) patient and some analysis results from several AI models. Every model's analysis results include mortality risk and feature importance weight. Your task is to ensemble analysis results of all models and select one result of models as your prediction result based on the relevant documents.'''
 
-ensemble_select_system_icu = '''You are a helpful medical expert with extensive medical knowledge. I will provide you with electronic health data of a End-Stage Renal Disease (ESRD) patient and some analysis results from several AI models. Every model's analysis results include mortality risk and feature importance weight. Your task is to ensemble analysis results of all models and select one result of models as your prediction result based on the relevant documents.'''
+ensemble_select_system_covid = '''You are a helpful medical expert with extensive medical knowledge. I will provide you with electronic health data of a patient admitted with a diagnosis of COVID-19 or suspected COVID-19 infection and some analysis results from several AI models. Every model's analysis results include mortality risk and feature importance weight. Your task is to ensemble analysis results of all models and select one of them as your final result based on the relevant documents.'''
+
+ensemble_select_system_icu = '''You are a helpful medical expert with extensive medical knowledge. I will provide you with electronic health data of a patient in Intensive Care Unit (ICU) and some analysis results from several AI models. Every model's analysis results include mortality risk and feature importance weight. Your task is to ensemble analysis results of all models and select one result of models as your prediction result based on the relevant documents.'''
 
 ensemble_select_user = Template('''
 Here are the relevant documents:

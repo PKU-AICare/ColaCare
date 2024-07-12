@@ -46,9 +46,9 @@ def get_range_desc(key: str, var: float):
 
 def get_mean_desc(var: str, mean: float):
     if var < mean:
-        return f"lower than the average value by {round((mean - var) / mean * 100, 0)}%"
+        return f"lower by {round((mean - var) / mean * 100, 0)}%"
     elif var > mean:
-        return f"higher than the average value by {round((var - mean) / mean * 100, 0)}%"
+        return f"higher by {round((var - mean) / mean * 100, 0)}%"
 
 
 def get_death_desc(risk: float):
@@ -119,13 +119,13 @@ def generate_prompt(dataset: str, data_url: str, patient_index: int, patient_id:
             survival_mean = survival_stats[key]['mean']
             dead_mean = dead_stats[key]['mean']
             key_name = medical_name[key] if key in medical_name else key
-            key_unit = medical_unit[key] if key in medical_unit else ''
-            last_visit += f'{key_name}: {round(value["value"], 2)} {key_unit}, with '
+            key_unit = ' ' + medical_unit[key] if key in medical_unit else ''
+            last_visit += f'{key_name}: with '
             if model == 'ConCare':
-                last_visit += f'importance weight of {round(float(value["attention"]), 3)} out of 1.0.'
+                last_visit += f'importance weight of {round(float(value["attention"]), 3)} out of 1.0. '
             else:
-                last_visit += f'shap value of {round(float(value["attention"]), 3)}.'
-            last_visit += f' The average value is {round(survival_mean, 2)} {key_unit} for survival patients ({get_mean_desc(value["value"], survival_mean)}), {round(dead_mean, 2)} {key_unit} for dead patients ({get_mean_desc(value["value"], dead_mean)}).\n'
+                last_visit += f'shap value of {round(float(value["attention"]), 3)}. '
+            last_visit += f'The feature value is {round(value["value"], 2)}{key_unit}, which is {get_mean_desc(value["value"], survival_mean)} than the average value of survival patients ({round(survival_mean, 2)}{key_unit}), {get_mean_desc(value["value"], dead_mean)} than the average value of dead patients ({round(dead_mean, 2)}{key_unit}).\n'
         last_visit_context += last_visit + '\n'
     
     # similar_patients = get_similar_patients(data_url, patient_id)
