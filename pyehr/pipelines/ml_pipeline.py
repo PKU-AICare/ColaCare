@@ -35,24 +35,14 @@ class MlPipeline(L.LightningModule):
     def forward(self, x):
         pass
     def training_step(self, batch, batch_idx):
-        if self.calib:
-            x, y, pid = batch
-            x = x.numpy()
-            y = y.numpy()
-        else:
-            x, y, lens, pid = batch
-            x, y = unpad_batch(x, y, lens)
+        x, y, lens, pid = batch
+        x, y = unpad_batch(x, y, lens)
         self.model.fit(x, y) # y contains both [outcome, los]
         # if self.calib:
         #     pd.to_pickle(self.model, self.checkpoint_path)
     def validation_step(self, batch, batch_idx):
-        if self.calib:
-            x, y, pid = batch
-            x = x.numpy()
-            y = y.numpy()
-        else:
-            x, y, lens, pid = batch
-            x, y = unpad_batch(x, y, lens)
+        x, y, lens, pid = batch
+        x, y = unpad_batch(x, y, lens)
         y_hat = self.model.predict(x) # y_hat is the prediction results, outcome or los
         metrics = get_all_metrics(y_hat, y, self.task, self.los_info)
         main_score = metrics[self.main_metric]
@@ -62,16 +52,11 @@ class MlPipeline(L.LightningModule):
             pd.to_pickle(self.model, self.checkpoint_path)
         return main_score
     def test_step(self, batch, batch_idx):
-        if self.calib:
-            x, y, pid = batch
-            x = x.numpy()
-            y = y.numpy()
-        else:
-            x, y, lens, pid = batch
-            x, y = unpad_batch(x, y, lens)
+        x, y, lens, pid = batch
+        x, y = unpad_batch(x, y, lens)
         self.model = pd.read_pickle(self.checkpoint_path)
         y_hat = self.model.predict(x)
-        feature_weight = self.model.get_feature_importance(x, 'shap')
+        feature_weight = self.model.get_feature_importance(x, 'shap')[:, 2:, 1]
         save_dir = f'logs/test/{self.dataset}/{self.model_name}'
         os.makedirs(save_dir, exist_ok=True)
         pd.to_pickle(y_hat, os.path.join(save_dir, 'output.pkl'))
