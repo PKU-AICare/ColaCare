@@ -55,7 +55,7 @@ class DlPipeline(L.LightningModule):
             x_demo, x_lab, mask = x[:, 0, :self.demo_dim], x[:, :, self.demo_dim:], generate_mask(lens)
             embedding, decov_loss, feature_weight = self.ehr_encoder(x_lab, x_demo, mask)
             embedding, decov_loss = embedding.to(x.device), decov_loss.to(x.device)
-            self.feature_weight = feature_weight.detach().cpu().numpy()
+            self.feature_weight = feature_weight.detach().cpu()
             self.embedding = embedding
             y_hat = self.head(embedding)
             return y_hat, embedding, decov_loss
@@ -124,6 +124,10 @@ class DlPipeline(L.LightningModule):
         x, y, lens, pid = batch
         loss, y, y_hat, embedding = self._get_loss(x, y, lens)
         outs = {'y_pred': y_hat, 'y_true': y, 'lens': lens, 'pids': pid, 'embeddings': embedding}
+        if self.model_name == 'ConCare':
+            feature_weight_unpad = nn.utils.rnn.unpad_sequence(self.feature_weight, batch_first=True, lengths=lens.cpu())
+            feature_weight = torch.vstack([f[-1] for f in feature_weight_unpad]).squeeze(dim=-1)
+            outs.update({'feature_weight': feature_weight})
         self.test_step_outputs.append(outs)
         return loss
     def on_test_epoch_end(self):
@@ -134,10 +138,11 @@ class DlPipeline(L.LightningModule):
         pids = []
         pids.extend([x['pids'] for x in self.test_step_outputs])
         save_dir = f'logs/test/{self.dataset}/{self.model_name}'
-        os.makedirs(save_dir, exist_ok=True)
-        pd.to_pickle(y_pred, os.path.join(save_dir, 'output.pkl'))
         if self.model_name == 'ConCare':
-            pd.to_pickle(self.feature_weight, os.path.join(save_dir, 'features.pkl'))
+            os.makedirs(save_dir, exist_ok=True)
+            pd.to_pickle(y_pred.numpy(), os.path.join(save_dir, 'output.pkl'))
+            feature_weight = torch.cat([x['feature_weight'] for x in self.test_step_outputs]).detach().cpu()
+            pd.to_pickle(feature_weight.numpy(), os.path.join(save_dir, 'features.pkl'))
         self.test_performance = get_all_metrics(y_pred, y_true, self.task, self.los_info)
         self.test_outputs = {'preds': y_pred, 'labels': y_true, 'lens': lens, 'pids': pids, 'embeddings': embeddings}
         self.test_step_outputs.clear()
