@@ -71,14 +71,14 @@ def run_ml_models(config, x):
     return output, None, feature_importance
 
 
-def get_data_from_files(data_url: str, patient_id: int):
-    pids = pd.read_pickle(os.path.join(data_url, "pid.pkl"))
-    xid = pids.index(patient_id)
-    x = pd.read_pickle(os.path.join(data_url, f"x.pkl"))[xid]
-    raw_x = pd.read_pickle(os.path.join(data_url, f"raw_x.pkl"))[xid]
-    date = pd.read_pickle(os.path.join(data_url, f"date.pkl"))[xid]
+def get_data_from_files(data_url: str, model: str, patient_index: int):
+    x = pd.read_pickle(os.path.join(data_url, "test_x.pkl"))[patient_index]
+    raw_x = pd.read_pickle(os.path.join(data_url, "test_raw_x.pkl"))[patient_index]
     features = pd.read_pickle(os.path.join(data_url, "labtest_features.pkl"))
-    return x, raw_x, date, features
+    
+    y = pd.read_pickle(os.path.join(data_url, f"{model}_output.pkl"))[patient_index]
+    important_features = pd.read_pickle(os.path.join(data_url, f"{model}_features.pkl"))[patient_index]
+    return x, raw_x, features, y, important_features
 
 
 def get_similar_patients(data_url: str, patient_id: int) -> Dict:
