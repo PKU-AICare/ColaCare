@@ -9,13 +9,17 @@ import tqdm
 import numpy as np
 
 corpus_names = {
-    "PubMed": ["pubmed"],
-    "Textbooks": ["textbooks"],
+    "PubMed": "pubmed",
+    "Textbooks": "textbooks",
 }
 
 retriever_names = {
-    "BM25": ["bm25"],
-    "MedCPT": ["ncbi/MedCPT-Query-Encoder"],
+    "BM25": "bm25",
+    "MedCPT": "ncbi/MedCPT-Query-Encoder",
+}
+
+retriever_paths = {
+    "MedCPT": "retriever/sentence_transformers/ncbi_MedCPT-Query-Encoder",
 }
 
 class CustomizeSentenceTransformer(SentenceTransformer): # change the default pooling "MEAN" to "CLS"
@@ -81,8 +85,9 @@ def construct_index(index_dir, model_name, h_dim=768):
 
 
 class Retriever: 
-    def __init__(self, retriever_name="ncbi/MedCPT-Query-Encoder", corpus_name="textbooks", db_dir="./corpus", **kwarg):
+    def __init__(self, retriever_name="ncbi/MedCPT-Query-Encoder", retriever_path=None, corpus_name="textbooks", db_dir="./corpus", **kwarg):
         self.retriever_name = retriever_name
+        self.retriever_path = retriever_path
         self.corpus_name = corpus_name
 
         self.db_dir = db_dir
@@ -121,7 +126,7 @@ class Retriever:
                 self.index = construct_index(index_dir=self.index_dir, model_name=self.retriever_name.replace("Query-Encoder", "Article-Encoder"), h_dim=h_dim)
                 print("[Finished] Corpus indexing finished!")
                 self.metadatas = [json.loads(line) for line in open(os.path.join(self.index_dir, "metadatas.jsonl")).read().strip().split('\n')]            
-            self.embedding_function = CustomizeSentenceTransformer(self.retriever_name, device="cuda" if torch.cuda.is_available() else "cpu")
+            self.embedding_function = CustomizeSentenceTransformer(self.retriever_path, device="cuda" if torch.cuda.is_available() else "cpu")
             self.embedding_function.eval()
 
     def get_relevant_documents(self, question, k=32, **kwarg):
@@ -155,13 +160,12 @@ class RetrievalSystem:
     def __init__(self, retriever_name="MedCPT", corpus_name="Textbooks", db_dir="./corpus"):
         self.retriever_name = retriever_name
         self.corpus_name = corpus_name
-        assert self.corpus_name in corpus_names
-        assert self.retriever_name in retriever_names
-        self.retrievers = []
-        for retriever in retriever_names[self.retriever_name]:
-            self.retrievers.append([])
-            for corpus in corpus_names[self.corpus_name]:
-                self.retrievers[-1].append(Retriever(retriever, corpus, db_dir))
+        assert self.corpus_name in corpus_name
+        assert self.retriever_name in retriever_name
+        retriever_name = retriever_names[self.retriever_name]
+        retriever_path = retriever_paths[self.retriever_name]
+        corpus_name = corpus_names[self.corpus_name]
+        self.retriever = Retriever(retriever_name, retriever_path, corpus_name, db_dir)
     
     def retrieve(self, question, k=32, rrf_k=100):
         '''
@@ -169,61 +173,6 @@ class RetrievalSystem:
         '''
         assert type(question) == str
 
-        texts = []
-        scores = []
+        texts, scores = self.retriever.get_relevant_documents(question, k=k)
 
-        if "RRF" in self.retriever_name:
-            k_ = max(k * 2, 100)
-        else:
-            k_ = k
-        for i in range(len(retriever_names[self.retriever_name])):
-            texts.append([])
-            scores.append([])
-            for j in range(len(corpus_names[self.corpus_name])):
-                t, s = self.retrievers[i][j].get_relevant_documents(question, k=k_)
-                texts[-1].append(t)
-                scores[-1].append(s)
-        texts, scores = self.merge(texts, scores, k=k, rrf_k=rrf_k)
-
-        return texts, scores
-
-    def merge(self, texts, scores, k=32, rrf_k=100):
-        '''
-            Merge the texts and scores from different retrievers
-        '''
-        RRF_dict = {}
-        for i in range(len(retriever_names[self.retriever_name])):
-            texts_all, scores_all = None, None
-            for j in range(len(corpus_names[self.corpus_name])):
-                if texts_all is None:
-                    texts_all = texts[i][j]
-                    scores_all = scores[i][j]
-                else:
-                    texts_all = texts_all + texts[i][j]
-                    scores_all = scores_all + scores[i][j]
-            if "specter" in retriever_names[self.retriever_name][i].lower():
-                sorted_index = np.array(scores_all).argsort()
-            else:
-                sorted_index = np.array(scores_all).argsort()[::-1]
-            texts[i] = [texts_all[i] for i in sorted_index]
-            scores[i] = [scores_all[i] for i in sorted_index]
-            for j, item in enumerate(texts[i]):
-                if item["id"] in RRF_dict:
-                    RRF_dict[item["id"]]["score"] += 1 / (rrf_k + j + 1)
-                    RRF_dict[item["id"]]["count"] += 1
-                else:
-                    RRF_dict[item["id"]] = {
-                        "id": item["id"],
-                        "title": item["title"],
-                        "content": item["content"],
-                        "score": 1 / (rrf_k + j + 1),
-                        "count": 1
-                        }
-        RRF_list = sorted(RRF_dict.items(), key=lambda x: x[1]["score"], reverse=True)
-        if len(texts) == 1:
-            texts = texts[0][:k]
-            scores = scores[0][:k]
-        else:
-            texts = [dict((key, item[1][key]) for key in ("id", "title", "content")) for item in RRF_list[:k]]
-            scores = [item[1]["score"] for item in RRF_list[:k]]
         return texts, scores
