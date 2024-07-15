@@ -11,14 +11,14 @@ from keywords_utils import generate_keywords, extract_and_parse_json
 dataset = "cdsl"
 data_url = f"ehr_datasets/{dataset}/processed/fold_1"
 retriever_name="MedCPT"
-corpus_name="Textbooks"
+corpus_name="PubMed"
 llm_model = "deepseek-chat"
 # llm_model = "OpenAI/gpt-3.5-turbo-16k"
 retcare = RetCare(llm_name=llm_model, ensemble='select', retriever_name=retriever_name, corpus_name=corpus_name)
 pids = pd.read_pickle(f'{data_url}/test_pid.pkl')
 
 
-for patient_index, patient_id in tqdm(enumerate(pids[:3]), total=len(pids[:3])):
+for patient_index, patient_id in tqdm(enumerate(pids), total=len(pids)):
     try:
         subcontext, hcontext = generate_prompt(dataset, data_url, patient_index, patient_id)
     except Exception as e:
