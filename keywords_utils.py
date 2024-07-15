@@ -1,9 +1,7 @@
-import sys
-sys.path.append('.')
 import re
 import json
 
-import openai
+from openai import OpenAI
 import ollama
 
 from template import *
@@ -11,9 +9,6 @@ from models.ckd_utils import generate_prompt
 from config import tech_config, deep_config
 
 config = deep_config
-if openai.api_key is None:
-    openai.api_base = config["api_base"]
-    openai.api_key = config["api_key"]
 
 
 def extract_and_parse_json(text):
@@ -45,15 +40,12 @@ def generate_keywords(model, context):
         )
         ans = response["message"]["content"]
     else:
-        response = openai.ChatCompletion.create(
+        client = OpenAI(api_key=config["api_key"], base_url=config["api_base"])
+        response = client.chat.completions.create(
             model=model,
             messages=messages,
+            stream=False
         )
-        ans = response["choices"][0]["message"]["content"]
-    
-    try:
-        ans = extract_and_parse_json(ans)
-        return ans
-    except Exception as e:
-        print(ans)
-        raise e
+        ans = response.choices[0].message.content
+    ans = extract_and_parse_json(ans)
+    return ans
