@@ -1,23 +1,21 @@
 import os
 import re
 import json
-import openai
+
 import tiktoken
 import ollama
-from retrieve_utils import RetrievalSystem
-from template import *
-from config import deep_config, tech_config
+from openai import OpenAI
 from tenacity import (
     retry,
     stop_after_attempt,
     wait_random_exponential,
 )
 
+from retrieve_utils import RetrievalSystem
+from template import *
+from config import deep_config, tech_config
+
 config = deep_config
-if openai.api_key is None:
-    openai.api_type = config["api_type"]
-    openai.api_base = config["api_base"] 
-    openai.api_key = config["api_key"]
 
 
 def extract_answer(text):
@@ -87,8 +85,8 @@ class RetCare:
             contexts = [""]
         if "openai" in self.llm_name.lower():
             context = self.tokenizer.decode(self.tokenizer.encode("\n".join(contexts))[:self.context_length])
-        # else:
-        #     contexts = [self.tokenizer.decode(self.tokenizer.encode("\n".join(contexts), add_special_tokens=False)[:self.context_length])]
+        else:
+            context = "\n".join(contexts)
 
         if save_dir is not None and not os.path.exists(save_dir):
             os.makedirs(save_dir)
@@ -110,7 +108,7 @@ class RetCare:
                 {"role": "system", "content": prompt_system},
                 {"role": "user", "content": prompt_user}
         ]
-        ans = self.generate(messages)
+        ans, prompt_tokens, completion_tokens = self.generate(messages)
         ans = extract_answer(re.sub("\s+", " ", ans))
 
         if save_dir is not None:
@@ -118,31 +116,34 @@ class RetCare:
                 json.dump(retrieved_snippets, f, indent=4)
             with open(os.path.join(save_dir, "response.json"), 'w') as f:
                 json.dump(ans, f, indent=4)
+            with open(os.path.join(save_dir, "scores.json"), 'w') as f:
+                json.dump(scores, f)
+            with open(os.path.join(save_dir, "messages.json"), 'w') as f:
+                json.dump(messages, f)
+            with open(os.path.join(save_dir, "tokens.json"), 'w') as f:
+                json.dump({
+                    "prompt_tokens": prompt_tokens,
+                    "completion_tokens": completion_tokens
+                }, f)
 
         return ans, retrieved_snippets, scores, messages
 
-    @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
+    # @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
     def generate(self, messages):
         '''
         generate response given messages
         '''
         if "openai" in self.llm_name.lower() or "deepseek" in self.llm_name.lower():
-            if openai.api_type == "azure":
-                response = openai.ChatCompletion.create(
-                    engine=self.model,
-                    messages=messages,
-                    temperature=0.0,
-                )
-            else:
-                response = openai.ChatCompletion.create(
-                    model=self.model,
-                    messages=messages,
-                )
-            ans = response["choices"][0]["message"]["content"]
+            client = OpenAI(api_key=config["api_key"], base_url=config["api_base"])
+            response = client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                stream=False
+            )
+            return response.choices[0].message.content, response.usage.prompt_tokens, response.usage.completion_tokens
         elif "llama" in self.llm_name.lower():
             response = ollama.chat(
-                model=self.llm_name,
+                model=self.model,
                 messages=messages,
             )
-            ans = response["message"]["content"]
-        return ans
+            return response["message"]["content"], 0, 0
