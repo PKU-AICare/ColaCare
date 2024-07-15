@@ -2,7 +2,7 @@ import os
 import json
 import re
 
-import openai
+from openai import OpenAI
 import tiktoken
 
 from config import tech_config, deep_config
@@ -10,10 +10,6 @@ from template import *
 from retriever import Retriever
 
 config = deep_config
-if openai.api_key is None:
-    openai.api_type = config["api_type"]
-    openai.api_base = config["api_base"] 
-    openai.api_key = config["api_key"]
 
 
 class Generator:
@@ -33,10 +29,13 @@ class Generator:
             {"role": "user", "content": keywords_user.render(question=question)}
         ]
         try:
-            response = openai.ChatCompletion.create(
+            client = OpenAI(api_key=config["api_key"], base_url=config["api_base"])
+            response = client.chat.completions.create(
                 model=self.model,
                 messages=messages,
+                stream=False
             )
+            ans = response.choices[0].message.content
         except Exception as e:
             raise Exception(f"Failed to generate keywords: {e}")
         ans = response["choices"][0]["message"]["content"]
@@ -57,14 +56,17 @@ class Generator:
         context = [self.tokenizer.decode(self.tokenizer.encode("\n".join(contexts))[:self.context_length])]
         
         messages=[
-            {"role": "system", "content": ensemble_system},
-            {"role": "user", "content": ensemble_user.render(context=context, hcontext=hcontext)}
+            {"role": "system", "content": ensemble_select_system_esrd},
+            {"role": "user", "content": ensemble_select_user.render(context=context, hcontext=hcontext)}
         ]
         try:
-            response = openai.ChatCompletion.create(
+            client = OpenAI(api_key=config["api_key"], base_url=config["api_base"])
+            response = client.chat.completions.create(
                 model=self.model,
                 messages=messages,
+                stream=False
             )
+            ans = response.choices[0].message.content
         except Exception as e:
             raise Exception(f"Failed to generate answer: {e}")
         ans = response["choices"][0]["message"]["content"]
