@@ -4,6 +4,7 @@ config.py
 logs/
 response/
 corpus/
+retriever/
 *.ipynb
 
 # Byte-compiled / optimized / DLL files
