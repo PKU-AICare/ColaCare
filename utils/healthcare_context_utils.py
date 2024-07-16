@@ -133,6 +133,7 @@ def generate_prompt(dataset: str, data_url: str, patient_index: int, patient_id:
     # for idx, patient in enumerate(similar_patients):
     #     similar_context += f"Patient {idx + 1}: {patient['gender']}, {patient['age']} years old, with original disease {patient['oriDisease']}{patient['basicDisease']}{patient['deathText']}.\n"
 
+
     subcontext = basic_context + last_visit_context
     hcontext = basic_context + '\n' + ehr_context + '\n' + last_visit_context
 
