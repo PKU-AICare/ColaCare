@@ -12,11 +12,11 @@ from ehrdatasets.loader.load_los_info import get_los_info
 from pipelines import DlPipeline, MlPipeline
 
 def run_ml_experiment(config):
-    los_config = get_los_info(f'ehrdatasets/{config["dataset"]}/processed/fold_{config["fold"]}')
+    los_config = get_los_info(f'/home/wangzixiang/retcare/ehr_datasets/{config["dataset"]}/processed/fold_{config["fold"]}')
     config.update({"los_info": los_config})
 
     # data
-    dm = EhrDataModule(f'ehrdatasets/{config["dataset"]}/processed/fold_{config["fold"]}', batch_size=config["batch_size"])
+    dm = EhrDataModule(f'/home/wangzixiang/retcare/ehr_datasets/{config["dataset"]}/processed/fold_{config["fold"]}', batch_size=config["batch_size"])
     # logger
     checkpoint_filename = f'{config["model"]}-fold{config["fold"]}-seed{config["seed"]}'
     logger = CSVLogger(save_dir="logs", name=f'train/{config["dataset"]}/{config["task"]}', version=checkpoint_filename)
@@ -33,11 +33,11 @@ def run_ml_experiment(config):
     return perf, outs
 
 def run_dl_experiment(config):
-    los_config = get_los_info(f'ehrdatasets/{config["dataset"]}/processed/fold_{config["fold"]}')
+    los_config = get_los_info(f'/home/wangzixiang/retcare/ehr_datasets/{config["dataset"]}/processed/fold_{config["fold"]}')
     config.update({"los_info": los_config})
 
     # data
-    dm = EhrDataModule(f'ehrdatasets/{config["dataset"]}/processed/fold_{config["fold"]}', batch_size=config["batch_size"])
+    dm = EhrDataModule(f'/home/wangzixiang/retcare/ehr_datasets/{config["dataset"]}/processed/fold_{config["fold"]}', batch_size=config["batch_size"])
     # logger
     checkpoint_filename = f'{config["model"]}-fold{config["fold"]}-seed{config["seed"]}'
     if "time_aware" in config and config["time_aware"] == True:
@@ -84,3 +84,4 @@ if __name__ == "__main__":
                 print(config)
                 perf, outs = run_func(config)
                 print(perf)
+                pd.to_pickle(perf, f'logs/test/{config["dataset"]}/{config["model"]}/perf.pkl')
