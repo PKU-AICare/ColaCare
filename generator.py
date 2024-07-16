@@ -54,7 +54,7 @@ class Generator:
         retrieved_contexts, scores = retriver.get_relevant_documents(hcontext)
         contexts = ["Document [{:d}] (Title: {:s}) {:s}".format(idx, retrieved_contexts[idx]["title"], retrieved_contexts[idx]["abstract"]) for idx in range(len(retrieved_contexts))]
         context = [self.tokenizer.decode(self.tokenizer.encode("\n".join(contexts))[:self.context_length])]
-        
+
         messages=[
             {"role": "system", "content": ensemble_select_system_esrd},
             {"role": "user", "content": ensemble_select_user.render(context=context, hcontext=hcontext)}

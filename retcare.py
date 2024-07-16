@@ -80,6 +80,7 @@ class RetCare:
             retrieved_snippets, scores = self.retrieval_system.retrieve(keywords, k=k, rrf_k=rrf_k)
         else:
             retrieved_snippets, scores = self.retrieval_system.retrieve(hcontext, k=k, rrf_k=rrf_k)
+        
         contexts = ["Document [{:d}] (Title: {:s}) {:s}".format(idx, retrieved_snippets[idx]["title"], retrieved_snippets[idx]["content"]) for idx in range(len(retrieved_snippets))]
         if len(contexts) == 0:
             contexts = [""]
@@ -90,7 +91,7 @@ class RetCare:
 
         if save_dir is not None and not os.path.exists(save_dir):
             os.makedirs(save_dir)
-
+        
         # generate answer
         if self.ensemble == 'select':
             prompt_user = self.templates["ensemble_select_prompt"].render(context=context, hcontext=hcontext)

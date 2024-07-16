@@ -5,7 +5,6 @@ from openai import OpenAI
 import ollama
 
 from template import *
-from models.ckd_utils import generate_prompt
 from config import tech_config, deep_config
 
 config = deep_config
