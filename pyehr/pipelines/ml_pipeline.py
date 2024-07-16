@@ -3,7 +3,6 @@ from pathlib import Path
 
 import pandas as pd
 import lightning as L
-import ipdb
 
 import models
 from ehrdatasets.loader.unpad import unpad_batch
@@ -38,8 +37,6 @@ class MlPipeline(L.LightningModule):
         x, y, lens, pid = batch
         x, y = unpad_batch(x, y, lens)
         self.model.fit(x, y) # y contains both [outcome, los]
-        # if self.calib:
-        #     pd.to_pickle(self.model, self.checkpoint_path)
     def validation_step(self, batch, batch_idx):
         x, y, lens, pid = batch
         x, y = unpad_batch(x, y, lens)
