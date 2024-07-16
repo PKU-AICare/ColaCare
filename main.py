@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 import pandas as pd
 
-from models.ckd_utils import generate_prompt
+from models.healthcare_context_utils import generate_prompt
 from retcare import RetCare
 from keywords_utils import generate_keywords, extract_and_parse_json
 
@@ -32,7 +32,7 @@ for patient_index, patient_id in tqdm(enumerate(pids), total=len(pids), desc=f"P
     except Exception as e:
         print(f"Patient {patient_id} failed in generating keywords with error: {e}")
         continue
-
+    
     save_dir=f'./response/{dataset}/pid{patient_id}'
     os.makedirs(save_dir, exist_ok=True)
     with open(os.path.join(save_dir, "hcontext.txt"), 'w') as f:
