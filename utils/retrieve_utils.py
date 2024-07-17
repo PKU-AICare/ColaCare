@@ -146,7 +146,6 @@ class Retriever:
 
         texts = self.idx2txt(indices)
         scores = res_[0][0].tolist()
-        
         return texts, scores
 
     def idx2txt(self, indices): # return List of Dict of str
@@ -155,6 +154,14 @@ class Retriever:
         Output: List of str
         '''
         return [json.loads(open(os.path.join(self.chunk_dir, i["source"]+".jsonl")).read().strip().split('\n')[i["index"]]) for i in indices]
+
+    def idx2embedding(self, indices): # return List of Embedding
+        '''
+        Input: List of Dict( {"source": str, "index": int} )
+        Output: List of Embedding
+        '''
+        return [np.load(os.path.join(self.index_dir, "embedding", i["source"]+".npy"))[i["index"]] for i in indices]
+
 
 class RetrievalSystem:
     def __init__(self, retriever_name="MedCPT", corpus_name="Textbooks", db_dir="./corpus"):
