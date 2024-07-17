@@ -84,4 +84,7 @@ if __name__ == "__main__":
                 print(config)
                 perf, outs = run_func(config)
                 print(perf)
-                pd.to_pickle(perf, f'logs/test/{config["dataset"]}/{config["model"]}/perf.pkl')
+                save_dir = f'logs/test/{config["dataset"]}/{config["model"]}'
+                os.makedirs(save_dir, exist_ok=True)
+                pd.to_pickle(perf, f'{save_dir}/perf.pkl')
+                pd.to_pickle(outs, f'{save_dir}/outs.pkl')

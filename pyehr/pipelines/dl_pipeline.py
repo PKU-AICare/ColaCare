@@ -30,7 +30,6 @@ class DlPipeline(L.LightningModule):
         self.main_metric = config["main_metric"]
         self.time_aware = config.get("time_aware", False)
         self.cur_best_performance = {}
-        self.embedding: torch.Tensor
         self.dataset = config["dataset"]
 
         if self.model_name == "StageNet":
@@ -56,30 +55,25 @@ class DlPipeline(L.LightningModule):
             embedding, decov_loss, feature_weight = self.ehr_encoder(x_lab, x_demo, mask)
             embedding, decov_loss = embedding.to(x.device), decov_loss.to(x.device)
             self.feature_weight = feature_weight.detach().cpu()
-            self.embedding = embedding
             y_hat = self.head(embedding)
             return y_hat, embedding, decov_loss
         elif self.model_name in ["GRASP", "Agent"]:
             x_demo, x_lab, mask = x[:, 0, :self.demo_dim], x[:, :, self.demo_dim:], generate_mask(lens)
             embedding = self.ehr_encoder(x_lab, x_demo, mask).to(x.device)
-            self.embedding = embedding
             y_hat = self.head(embedding)
             return y_hat, embedding
         elif self.model_name in ["AdaCare", "RETAIN", "TCN", "Transformer", "StageNet"]:
             mask = generate_mask(lens)
             embedding = self.ehr_encoder(x, mask).to(x.device)
-            self.embedding = embedding
             y_hat = self.head(embedding)
             return y_hat, embedding
         elif self.model_name in ["GRU", "LSTM", "RNN", "MLP"]:
             embedding = self.ehr_encoder(x).to(x.device)
-            self.embedding = embedding
             y_hat = self.head(embedding)
             return y_hat, embedding
         elif self.model_name in ["MCGRU"]:
             x_demo, x_lab = x[:, 0, :self.demo_dim], x[:, :, self.demo_dim:]
             embedding = self.ehr_encoder(x_lab, x_demo).to(x.device)
-            self.embedding = embedding
             y_hat = self.head(embedding)
             return y_hat, embedding
 
@@ -134,18 +128,14 @@ class DlPipeline(L.LightningModule):
         y_pred = torch.cat([x['y_pred'] for x in self.test_step_outputs]).detach().cpu()
         y_true = torch.cat([x['y_true'] for x in self.test_step_outputs]).detach().cpu()
         lens = torch.cat([x['lens'] for x in self.test_step_outputs]).detach().cpu()
-        embeddings = torch.cat([torch.nn.functional.pad(x['embeddings'], (0, 0, 0, max([y['embeddings'].shape[1] for y in self.test_step_outputs])-x['embeddings'].shape[1], 0, 0)) for x in self.test_step_outputs])
+        embeddings = torch.cat([torch.nn.functional.pad(x['embeddings'], (0, 0, 0, max([y['embeddings'].shape[1] for y in self.test_step_outputs])-x['embeddings'].shape[1], 0, 0)) for x in self.test_step_outputs]).detach().cpu()
         pids = []
         pids.extend([x['pids'] for x in self.test_step_outputs])
-        save_dir = f'logs/test/{self.dataset}/{self.model_name}'
-        if self.model_name == 'ConCare':
-            os.makedirs(save_dir, exist_ok=True)
-            pd.to_pickle(y_pred.numpy(), os.path.join(save_dir, 'output.pkl'))
-            feature_weight = torch.cat([x['feature_weight'] for x in self.test_step_outputs]).detach().cpu()
-            pd.to_pickle(feature_weight.numpy(), os.path.join(save_dir, 'features.pkl'))
-            pd.to_pickle(embeddings.detach().cpu().numpy(), os.path.join(save_dir, 'embeddings.pkl'))
         self.test_performance = get_all_metrics(y_pred, y_true, self.task, self.los_info)
         self.test_outputs = {'preds': y_pred, 'labels': y_true, 'lens': lens, 'pids': pids, 'embeddings': embeddings}
+        if self.model_name == 'ConCare':
+            feature_weight = torch.cat([x['feature_weight'] for x in self.test_step_outputs]).detach().cpu()
+            self.test_outputs.update({'feature_weight': feature_weight})
         self.test_step_outputs.clear()
         return self.test_performance
 
