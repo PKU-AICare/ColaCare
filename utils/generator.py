@@ -5,9 +5,9 @@ import re
 from openai import OpenAI
 import tiktoken
 
-from config import tech_config, deep_config
-from template import *
-from retriever import Retriever
+from .config import tech_config, deep_config
+from .template import *
+from .retriever import Retriever
 
 config = deep_config
 
