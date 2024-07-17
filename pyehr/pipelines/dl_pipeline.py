@@ -143,6 +143,7 @@ class DlPipeline(L.LightningModule):
             pd.to_pickle(y_pred.numpy(), os.path.join(save_dir, 'output.pkl'))
             feature_weight = torch.cat([x['feature_weight'] for x in self.test_step_outputs]).detach().cpu()
             pd.to_pickle(feature_weight.numpy(), os.path.join(save_dir, 'features.pkl'))
+            pd.to_pickle(embeddings.detach().cpu().numpy(), os.path.join(save_dir, 'embeddings.pkl'))
         self.test_performance = get_all_metrics(y_pred, y_true, self.task, self.los_info)
         self.test_outputs = {'preds': y_pred, 'labels': y_true, 'lens': lens, 'pids': pids, 'embeddings': embeddings}
         self.test_step_outputs.clear()
