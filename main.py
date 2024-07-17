@@ -4,9 +4,9 @@ from tqdm import tqdm
 
 import pandas as pd
 
-from models.healthcare_context_utils import generate_prompt
+from utils.healthcare_context_utils import generate_prompt
 from retcare import RetCare
-from keywords_utils import generate_keywords, extract_and_parse_json
+from utils.keywords_utils import generate_keywords, extract_and_parse_json
 
 dataset = "cdsl"
 data_url = f"ehr_datasets/{dataset}/processed/fold_1"

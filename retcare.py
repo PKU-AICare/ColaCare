@@ -11,9 +11,9 @@ from tenacity import (
     wait_random_exponential,
 )
 
-from retrieve_utils import RetrievalSystem
-from template import *
-from config import deep_config, tech_config
+from utils.retrieve_utils import RetrievalSystem
+from utils.template import *
+from utils.config import deep_config, tech_config
 
 config = deep_config
 
