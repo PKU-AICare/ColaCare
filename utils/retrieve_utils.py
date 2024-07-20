@@ -9,9 +9,10 @@ import tqdm
 import numpy as np
 
 corpus_names = {
-    "PubMed": "pubmed",
-    "MSD": "msd",
-    "Textbooks": "textbooks",
+    "MOC": ["pubmed", "msd"], # Mixture of Corpus
+    "PubMed": ["pubmed"],
+    "MSD": ["msd"],
+    "Textbooks": ["textbooks"],
 }
 
 retriever_names = {
@@ -130,20 +131,30 @@ class Retriever:
 
 
 class RetrievalSystem:
-    def __init__(self, retriever_name="MedCPT", corpus_name="Textbooks", corpus_dir="./corpus"):
-        self.retriever_name = retriever_name
-        self.corpus_name = corpus_name
-        assert self.corpus_name in corpus_name
-        assert self.retriever_name in retriever_name
-        retriever_name = retriever_names[self.retriever_name]
-        retriever_path = retriever_paths[self.retriever_name]
-        corpus_name = corpus_names[self.corpus_name]
-        self.retriever = Retriever(retriever_name, retriever_path, corpus_name, corpus_dir)
+    def __init__(self, retriever_name="MedCPT", corpus_name="MOC", corpus_dir="./corpus"):
+        assert retriever_name in retriever_names
+        assert corpus_name in corpus_names
+        self.retriever_name = retriever_names[retriever_name]
+        self.retriever_path = retriever_paths[retriever_name]
+        self.corpus_names = corpus_names[corpus_name]
+        self.retrievers = [Retriever(self.retriever_name, self.retriever_path, corpus_name, corpus_dir) for corpus_name in self.corpus_names]
     
-    def retrieve(self, question, k=32):
+    def retrieve(self, question, k=16):
         '''
             Given questions, return the relevant snippets from the corpus
         '''
         assert type(question) == str
+        
+        retrieve_results = {
+            "texts": [],
+            "embeddings": [],
+            "scores": []
+        }
 
-        return self.retriever.get_relevant_documents(question, k=k)
+        for retriever in self.retrievers:
+            texts, embeddings, scores = retriever.get_relevant_documents(question, k=k)
+            retrieve_results["texts"] += texts
+            retrieve_results["embeddings"] += embeddings
+            retrieve_results["scores"] += scores
+
+        return retrieve_results
