@@ -1,4 +1,3 @@
-import json
 import os
 from tqdm import tqdm
 
@@ -6,13 +5,13 @@ import pandas as pd
 
 from utils.healthcare_context_utils import generate_prompt
 from retcare import RetCare
-from utils.keywords_utils import generate_keywords, extract_and_parse_json
+from utils.keywords_utils import generate_keywords
 
 dataset = "cdsl"
 data_url = f"ehr_datasets/{dataset}/processed/fold_1"
 retriever_name = "MedCPT"
-corpus_name = "PubMed"
-# corpus_name = "Textbooks"
+# corpus_name = "PubMed"
+corpus_name = "Textbooks"
 llm_model = "deepseek-chat"
 # llm_model = "OpenAI/gpt-3.5-turbo-16k"
 retcare = RetCare(llm_name=llm_model, ensemble='select', retriever_name=retriever_name, corpus_name=corpus_name)
