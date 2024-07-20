@@ -1,12 +1,14 @@
-
-from sentence_transformers.models import Transformer, Pooling
-from sentence_transformers import SentenceTransformer
-import os
-import faiss
+from typing import Dict
 import json
+import os
+
+import faiss
 import torch
 import tqdm
 import numpy as np
+from sentence_transformers.models import Transformer, Pooling
+from sentence_transformers import SentenceTransformer
+
 
 corpus_names = {
     "MOC": ["pubmed", "msd"], # Mixture of Corpus
@@ -22,6 +24,7 @@ retriever_names = {
 retriever_paths = {
     "MedCPT": "retriever/sentence_transformers/ncbi_MedCPT-Query-Encoder",
 }
+
 
 class CustomizeSentenceTransformer(SentenceTransformer): # change the default pooling "MEAN" to "CLS"
     def _load_auto_model(self, model_name_or_path, **kwargs):
@@ -139,7 +142,7 @@ class RetrievalSystem:
         self.corpus_names = corpus_names[corpus_name]
         self.retrievers = [Retriever(self.retriever_name, self.retriever_path, corpus_name, corpus_dir) for corpus_name in self.corpus_names]
     
-    def retrieve(self, question, k=16):
+    def retrieve(self, question, k=16) -> Dict[str, list]:
         '''
             Given questions, return the relevant snippets from the corpus
         '''
