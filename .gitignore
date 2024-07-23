@@ -5,6 +5,7 @@ logs/
 response/
 corpus/
 retriever/
+output/
 *.ipynb
 
 # Byte-compiled / optimized / DLL files
