@@ -208,4 +208,4 @@ class ContextBuilder:
         subcontext = basic_context + last_visit_context
         hcontext = basic_context + '\n' + ehr_context + '\n' + last_visit_context
 
-        return subcontext, hcontext
+        return basic_context, subcontext, hcontext
