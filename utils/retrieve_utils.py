@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import List, Dict, Tuple
 import json
 import os
 
@@ -118,14 +118,14 @@ class Retriever:
         scores = res_[0][0].tolist()
         return texts, embeddings, scores
 
-    def idx2txt(self, indices): # return List of Dict of str
+    def idx2txt(self, indices) -> List[Dict[str, str]]:
         '''
         Input: List of Dict( {"source": str, "index": int} )
         Output: List of str
         '''
         return [json.loads(open(os.path.join(self.chunk_dir, i["source"]+".jsonl")).read().strip().split('\n')[i["index"]]) for i in indices]
 
-    def idx2embedding(self, indices): # return List of Embedding
+    def idx2embedding(self, indices) -> List[np.ndarray]:
         '''
         Input: List of Dict( {"source": str, "index": int} )
         Output: List of Embedding
@@ -142,22 +142,20 @@ class RetrievalSystem:
         self.corpus_names = corpus_names[corpus_name]
         self.retrievers = [Retriever(self.retriever_name, self.retriever_path, corpus_name, corpus_dir) for corpus_name in self.corpus_names]
     
-    def retrieve(self, question, k=16) -> Dict[str, list]:
+    def retrieve(self, question, k=16) -> Tuple[List[Dict[str, str]], List[np.ndarray], List[float]]:
         '''
             Given questions, return the relevant snippets from the corpus
         '''
         assert type(question) == str
         
-        retrieve_results = {
-            "texts": [],
-            "embeddings": [],
-            "scores": []
-        }
+        retrieve_texts = []
+        retrieve_embeddings = []
+        retrieve_scores = []
 
         for retriever in self.retrievers:
             texts, embeddings, scores = retriever.get_relevant_documents(question, k=k)
-            retrieve_results["texts"] += texts
-            retrieve_results["embeddings"] += embeddings
-            retrieve_results["scores"] += scores
+            retrieve_texts += texts
+            retrieve_embeddings += embeddings
+            retrieve_scores += scores
 
-        return retrieve_results
+        return retrieve_texts, retrieve_embeddings, retrieve_scores
