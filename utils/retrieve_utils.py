@@ -100,8 +100,11 @@ class Retriever:
             print("[In progress] Embedding finished! The dimension of the embeddings is {:d}.".format(h_dim))
             self.index = construct_index(index_dir=self.index_dir, h_dim=h_dim)
             print("[Finished] Corpus indexing finished!")
-            self.metadatas = [json.loads(line) for line in open(os.path.join(self.index_dir, "metadatas.jsonl")).read().strip().split('\n')]            
-        self.embedding_function = CustomizeSentenceTransformer(self.retriever_path, device="cuda" if torch.cuda.is_available() else "cpu")
+            self.metadatas = [json.loads(line) for line in open(os.path.join(self.index_dir, "metadatas.jsonl")).read().strip().split('\n')]
+        if os.path.exists(self.retriever_path):
+            self.embedding_function = CustomizeSentenceTransformer(self.retriever_path, device="cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            self.embedding_function = CustomizeSentenceTransformer(self.retriever_name, device="cuda" if torch.cuda.is_available() else "cpu")
         self.embedding_function.eval()
 
     def get_relevant_documents(self, question, k=32, **kwarg):
