@@ -22,7 +22,7 @@ for patient_index, patient_id in tqdm(enumerate(pids), total=len(pids), desc=f"P
     try:
         subcontext, hcontext = generate_prompt(dataset, data_url, patient_index, patient_id)
     except Exception as e:
-        print(f"Patient {patient_id} failed with error: {e}")
+        print(f"Patient {patient_id} failed in generatin prompt with error: {e}")
         continue
     
     try:
