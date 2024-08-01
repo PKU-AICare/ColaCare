@@ -25,13 +25,13 @@ class MCGRU(nn.Module):
         bs, time_steps, lab_dim = x.shape
         demo = self.demo_proj(static) # [bs, hidden_dim]
         x = self.lab_proj(x)
-        out = torch.zeros(bs, time_steps, self.lab_dim, self.feat_dim).to(x.device)
+        out = torch.zeros(bs, self.lab_dim, self.feat_dim).to(x.device)
         for i, gru in enumerate(self.grus):
-            cur_feat = x[:, :, i].unsqueeze(-1)
+            cur_feat = x[:, -1, i].unsqueeze(-1)
             cur_feat = gru(cur_feat)[0]
-            out[:, :, i] = cur_feat
-        out = out.flatten(2) # b t l f -> b t (l f)
+            out[:, i] = cur_feat
+        out = out.flatten(1) # b l f -> b (l f)
         # concat demo and out
-        out = torch.cat([demo.unsqueeze(1).repeat(1, time_steps, 1), out], dim=-1)
-        out = self.out_proj(out)
+        out = torch.cat([demo, out], dim=-1)
+        out = self.out_proj(out) # [bs, hidden_dim]
         return out
