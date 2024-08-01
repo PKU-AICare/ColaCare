@@ -17,8 +17,6 @@ class MlPipeline(L.LightningModule):
         self.los_info = config["los_info"] if "los_info" in config else None
         self.model_name = config["model"]
         self.main_metric = config["main_metric"]
-        self.calib = config["calib"]
-        self.calib_model_name = config["calib_model"] if "calib_model" in config else None
         self.cur_best_performance = {}
         self.dataset = config["dataset"]
 
@@ -53,13 +51,16 @@ class MlPipeline(L.LightningModule):
         x, y = unpad_batch(x, y, lens)
         self.model = pd.read_pickle(self.checkpoint_path)
         y_hat = self.model.predict(x)
-        feature_weight = self.model.get_feature_importance(x, 'shap')[:, 2:, 1]
+        if self.model_name == 'LR':
+            feature_weight = self.model.get_feature_importance(x, 'shap')[:, 2:, 1]
+        else:
+            feature_weight = self.model.get_feature_importance(x, 'shap')[:, 2:]
         save_dir = f'logs/test/{self.dataset}/{self.model_name}'
         os.makedirs(save_dir, exist_ok=True)
         pd.to_pickle(y_hat, os.path.join(save_dir, 'output.pkl'))
         pd.to_pickle(feature_weight, os.path.join(save_dir, 'features.pkl'))
         self.test_performance = get_all_metrics(y_hat, y, self.task, self.los_info)
-        self.test_outputs = {'preds': y_hat, 'labels': y}
+        self.test_outputs = {'preds': y_hat, 'labels': y, 'feature_weight': feature_weight}
         return self.test_performance
     def configure_optimizers(self):
         pass
