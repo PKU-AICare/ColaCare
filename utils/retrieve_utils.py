@@ -11,7 +11,7 @@ from sentence_transformers import SentenceTransformer
 
 
 corpus_names = {
-    "MOC": ["pubmed", "msd"], # Mixture of Corpus
+    "MOC": ["msd", "pubmed"], # Mixture of Corpus
     "PubMed": ["pubmed"],
     "MSD": ["msd"],
     "Textbooks": ["textbooks"],
@@ -42,7 +42,7 @@ def embed(chunk_dir, index_dir, model_name, **kwargs):
     model = CustomizeSentenceTransformer(model_name, device="cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
 
-    fnames = sorted([fname for fname in os.listdir(chunk_dir) if fname.endswith(".jsonl")])
+    fnames = sorted([fname for fname in os.listdir(chunk_dir) if fname.endswith(".json") or fname.endswith(".jsonl")])
 
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
@@ -50,12 +50,14 @@ def embed(chunk_dir, index_dir, model_name, **kwargs):
     with torch.no_grad():
         for fname in tqdm.tqdm(fnames):
             fpath = os.path.join(chunk_dir, fname)
-            save_path = os.path.join(save_dir, fname.replace(".jsonl", ".npy"))
+            save_path = os.path.join(save_dir, fname.replace(".json", ".npy") if fname.endswith(".json") else fname.replace(".jsonl", ".npy"))
             if os.path.exists(save_path):
                 continue
             if open(fpath).read().strip() == "":
                 continue
-            texts = [json.loads(item) for item in open(fpath).read().strip().split('\n')]
+            # texts = [json.loads(item) for item in open(fpath).read().strip().split('\n')]
+            # texts = [[item["title"], item["content"]] for item in texts]
+            texts = [json.loads(open(fpath).read())]
             texts = [[item["title"], item["content"]] for item in texts]
             embed_chunks = model.encode(texts, **kwargs)
             np.save(save_path, embed_chunks)
@@ -79,7 +81,7 @@ def construct_index(index_dir, h_dim=768):
 
 
 class Retriever: 
-    def __init__(self, retriever_name="ncbi/MedCPT-Query-Encoder", retriever_path=None, corpus_name="textbooks", corpus_dir="./corpus", **kwargs):
+    def __init__(self, retriever_name: str="ncbi/MedCPT-Query-Encoder", retriever_path: str=None, corpus_name: str="textbooks", corpus_dir: str="./corpus", **kwargs):
         self.retriever_name = retriever_name
         self.retriever_path = retriever_path
         self.corpus_name = corpus_name
@@ -96,7 +98,10 @@ class Retriever:
             print("[Finished] Corpus loading finished!")
         else:
             print("[In progress] Embedding the {:s} corpus with the {:s} retriever...".format(self.corpus_name, self.retriever_name.replace("Query-Encoder", "Article-Encoder")))
-            h_dim = embed(chunk_dir=self.chunk_dir, index_dir=self.index_dir, model_name=self.retriever_name.replace("Query-Encoder", "Article-Encoder"), **kwargs)
+            if os.path.exists(self.retriever_path.replace("Query-Encoder", "Article-Encoder")):
+                h_dim = embed(chunk_dir=self.chunk_dir, index_dir=self.index_dir, model_name=self.retriever_path.replace("Query-Encoder", "Article-Encoder"), **kwargs)
+            else:
+                h_dim = embed(chunk_dir=self.chunk_dir, index_dir=self.index_dir, model_name=self.retriever_name.replace("Query-Encoder", "Article-Encoder"), **kwargs)
             print("[In progress] Embedding finished! The dimension of the embeddings is {:d}.".format(h_dim))
             self.index = construct_index(index_dir=self.index_dir, h_dim=h_dim)
             print("[Finished] Corpus indexing finished!")
@@ -126,7 +131,13 @@ class Retriever:
         Input: List of Dict( {"source": str, "index": int} )
         Output: List of str
         '''
-        return [json.loads(open(os.path.join(self.chunk_dir, i["source"]+".jsonl")).read().strip().split('\n')[i["index"]]) for i in indices]
+        texts = []
+        for i in indices:
+            if os.path.exists(os.path.join(self.chunk_dir, i["source"]+".json")):
+                texts.append(json.loads(open(os.path.join(self.chunk_dir, i["source"]+".json")).read()))
+            else:
+                texts.append(json.loads(open(os.path.join(self.chunk_dir, i["source"]+".jsonl")).read().strip().split('\n')[i["index"]]))
+        return texts
 
     def idx2embedding(self, indices) -> List[np.ndarray]:
         '''
