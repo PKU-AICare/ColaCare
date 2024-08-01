@@ -1,15 +1,12 @@
-import os
-
 import lightning as L
 import torch
 import torch.nn as nn
-import pandas as pd
 
 import models
 from ehrdatasets.loader.unpad import unpad_y
 from losses import get_loss
 from metrics import get_all_metrics, check_metric_is_better
-from models.utils import generate_mask, get_last_visit
+from models.utils import generate_mask
 
 
 class DlPipeline(L.LightningModule):
@@ -25,7 +22,6 @@ class DlPipeline(L.LightningModule):
         self.learning_rate = config["learning_rate"]
         self.task = config["task"]
         self.los_info = config["los_info"] if "los_info" in config else None
-        self.calib = config["calib"] if "calib" in config else False
         self.model_name = config["model"]
         self.main_metric = config["main_metric"]
         self.time_aware = config.get("time_aware", False)
@@ -63,7 +59,7 @@ class DlPipeline(L.LightningModule):
             y_hat = self.head(embedding)
             return y_hat, embedding
         elif self.model_name in ["AdaCare", "RETAIN", "TCN", "Transformer", "StageNet"]:
-            mask = generate_mask(lens)
+            mask = generate_mask(lens).to(x.device)
             embedding = self.ehr_encoder(x, mask).to(x.device)
             y_hat = self.head(embedding)
             return y_hat, embedding
@@ -128,16 +124,23 @@ class DlPipeline(L.LightningModule):
         y_pred = torch.cat([x['y_pred'] for x in self.test_step_outputs]).detach().cpu()
         y_true = torch.cat([x['y_true'] for x in self.test_step_outputs]).detach().cpu()
         lens = torch.cat([x['lens'] for x in self.test_step_outputs]).detach().cpu()
-        embeddings = torch.cat([torch.nn.functional.pad(x['embeddings'], (0, 0, 0, max([y['embeddings'].shape[1] for y in self.test_step_outputs])-x['embeddings'].shape[1], 0, 0)) for x in self.test_step_outputs]).detach().cpu()
+        embeddings = torch.cat([x['embeddings'] for x in self.test_step_outputs]).detach().cpu()
         pids = []
         pids.extend([x['pids'] for x in self.test_step_outputs])
         self.test_performance = get_all_metrics(y_pred, y_true, self.task, self.los_info)
-        self.test_outputs = {'preds': y_pred, 'labels': y_true, 'lens': lens, 'pids': pids, 'embeddings': embeddings}
+        self.test_outputs = {'preds': y_pred.numpy(), 'labels': y_true.numpy(), 'lens': lens.numpy(), 'pids': pids, 'embeddings': embeddings.numpy()}
         if self.model_name == 'ConCare':
-            feature_weight = torch.cat([x['feature_weight'] for x in self.test_step_outputs]).detach().cpu()
+            feature_weight = torch.cat([x['feature_weight'] for x in self.test_step_outputs]).detach().cpu().numpy()
             self.test_outputs.update({'feature_weight': feature_weight})
         self.test_step_outputs.clear()
         return self.test_performance
+
+    def predict(self, x):
+        xx = torch.tensor(x).unsqueeze(1).to(dtype=torch.float32, device="cuda:1")
+        lens = torch.ones(xx.shape[0]).to(xx.device)
+        y_hat = self(xx, lens)[0]
+        y_hat = y_hat.detach().cpu().numpy()
+        return y_hat
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.learning_rate)
