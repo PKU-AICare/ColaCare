@@ -6,6 +6,9 @@ response/
 corpus/
 retriever/
 output/
+lm/
+PrimeNet/
+Warpformer/
 *.ipynb
 
 # Byte-compiled / optimized / DLL files
