@@ -1,19 +1,19 @@
 import os
-from typing import List
+from typing import List, Literal
 
 import pandas as pd
 import numpy as np
 
-from utils.ckd_info import medical_standard, disease_english, medical_name, medical_unit, original_disease
+from .datasets_info import *
 
 
-def get_data_from_files(data_url: str, model: str, patient_index: int):
+def get_data_from_files(data_url: str, model: str, seed: int, patient_index: int):
     x = pd.read_pickle(os.path.join(data_url, "test_x.pkl"))[patient_index]
     raw_x = pd.read_pickle(os.path.join(data_url, "test_raw_x.pkl"))[patient_index]
     features = pd.read_pickle(os.path.join(data_url, "labtest_features.pkl"))
     
-    y = pd.read_pickle(os.path.join(data_url, f"{model}_output.pkl"))[patient_index]
-    important_features = pd.read_pickle(os.path.join(data_url, f"{model}_features.pkl"))[patient_index]
+    y = pd.read_pickle(os.path.join(data_url, f"{model}_seed{seed}_output.pkl"))[patient_index]
+    important_features = pd.read_pickle(os.path.join(data_url, f"{model}_seed{seed}_features.pkl"))[patient_index]
     return x, raw_x, features, y, important_features
 
 
@@ -78,7 +78,6 @@ def get_distribution(data, values):
 
 
 def format_input_ehr(raw_x: List[List[float]], features: List[str]):
-    raw_x = np.array(raw_x)[:, 2:]
     ehr = ""
     for i, feature in enumerate(features):
         name = medical_name[feature] if feature in medical_name else feature
@@ -146,18 +145,19 @@ def generate_prompt(dataset: str, data_url: str, patient_index: int, patient_id:
 
 
 class ContextBuilder:
-    def __init__(self, dataset_name: str, model_name: str) -> None:
+    def __init__(self, dataset_name: str, model_name: str, seed: int) -> None:
         self.dataset_name = dataset_name
         self.dataset_dir = f"ehr_datasets/{dataset_name}/processed/fold_1"
         self.model_name = model_name
-        
- 
-    def generate_context(self, patient_index: int, patient_id: int):
+        self.seed = seed
+
+
+    def generate_context(self, patient_index: int, patient_id):
         """Generate healthcare context for the patient.
 
         Args:
             patient_index (int): The index of the patient in the dataset.
-            patient_id (int): The ID of the patient in the dataset.
+            patient_id (str | int): The ID of the patient in the dataset.
 
         Returns:
             List[str]: The healthcare context for the patient.
@@ -180,9 +180,17 @@ class ContextBuilder:
             age = basic_data["Age"]
             basic_context = f"This {gender} patient, aged {age}, is an patient admitted with a diagnosis of COVID-19 or suspected COVID-19 infection.\n"
         else: # [mimic-iii, mimic-iv]
-            basic_context = '\n'
+            basic_data = pd.read_pickle(os.path.join(self.dataset_dir, 'basic.pkl'))[patient_id]
+            gender = "male" if basic_data["Sex"] == 1 else "female"
+            age = basic_data["Age"]
+            basic_context = f"This {gender} patient, aged {age}, is an patient in Intensive Care Unit (ICU).\n"
 
-        _, raw_x, features, y, important_features = get_data_from_files(self.dataset_dir, self.model_name, patient_index)
+        _, raw_x, features, y, important_features = get_data_from_files(self.dataset_dir, self.model_name, self.seed, patient_index)
+        
+        if self.dataset_name == 'mimic-iv':
+            raw_x = np.array(raw_x)[:, 2 + 47:]
+        else:
+            raw_x =  np.array(raw_x)[:, 2:]
         ehr_context = "Here is complete medical information from multiple visits of a patient, with each feature within this data as a string of values separated by commas.\n" + format_input_ehr(raw_x, features)
 
         last_visit = f"The mortality prediction risk for the patient from {self.model_name} model is {round(float(y), 2)} out of 1.0, which means the patient is at {get_death_desc(float(y))} of death risk. Our model especially pays great attention to following features:\n"
@@ -196,16 +204,33 @@ class ContextBuilder:
             survival_mean = survival_stats[key]['mean']
             dead_mean = dead_stats[key]['mean']
             key_name = medical_name[key] if key in medical_name else key
-            key_unit = ' ' + medical_unit[key] if key in medical_unit else ''
+            if self.dataset_name == 'ckd':            
+                key_unit = ' ' + medical_unit[key] if key in medical_unit else ''
+            elif self.dataset_name == 'mimic-iv':
+                key_unit = ' ' + mimic_unit[key] if key in mimic_unit else ''
+            else:
+                key_unit = ''
             last_visit += f'{key_name}: with '
             if self.model_name == 'ConCare':
                 last_visit += f'importance weight of {round(float(value["attention"]), 3)} out of 1.0. '
             else:
                 last_visit += f'shap value of {round(float(value["attention"]), 3)}. '
-            last_visit += f'The feature value is {round(value["value"], 2)}{key_unit}, which is {get_mean_desc(value["value"], survival_mean)} than the average value of survival patients ({round(survival_mean, 2)}{key_unit}), {get_mean_desc(value["value"], dead_mean)} than the average value of dead patients ({round(dead_mean, 2)}{key_unit}).\n'
+            last_visit += f'The feature value is {round(value["value"], 2)}{key_unit}, which is {get_mean_desc(value["value"], survival_mean)} than the average value of survival patients ({round(survival_mean, 2)}{key_unit}), {get_mean_desc(value["value"], dead_mean)} than the average value of dead patients ({round(dead_mean, 2)}{key_unit}).'
+            if self.dataset_name == 'ckd':            
+                pass
+            elif self.dataset_name == 'mimic-iv':
+                last_visit += f" The reference range is {mimic_range[key]}.\n" if key in mimic_range else ""
+            else:
+                last_visit += "\n"
         last_visit_context = last_visit + '\n'
 
         subcontext = basic_context + last_visit_context
         hcontext = basic_context + '\n' + ehr_context + '\n' + last_visit_context
 
         return basic_context, subcontext, hcontext
+    
+    
+if __name__ == '__main__':
+    builder = ContextBuilder('mimic-iv', 'ConCare', 1)
+    basic_context, subcontext, hcontext = builder.generate_context(0, '10004401_2')
+    print(hcontext)
