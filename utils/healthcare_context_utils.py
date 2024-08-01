@@ -51,9 +51,9 @@ def get_range_desc(key: str, var: float):
 
 def get_mean_desc(var: str, mean: float):
     if var < mean:
-        return f"lower by {round((mean - var) / mean * 100, 0)}%"
+        return f"{round((mean - var) / mean * 100, 0)}% lower"
     elif var > mean:
-        return f"higher by {round((var - mean) / mean * 100, 0)}%"
+        return f"{round((var - mean) / mean * 100, 0)}% higher"
 
 
 def get_death_desc(risk: float):
@@ -215,7 +215,7 @@ class ContextBuilder:
                 last_visit += f'importance weight of {round(float(value["attention"]), 3)} out of 1.0. '
             else:
                 last_visit += f'shap value of {round(float(value["attention"]), 3)}. '
-            last_visit += f'The feature value is {round(value["value"], 2)}{key_unit}, which is {get_mean_desc(value["value"], survival_mean)} than the average value of survival patients ({round(survival_mean, 2)}{key_unit}), {get_mean_desc(value["value"], dead_mean)} than the average value of dead patients ({round(dead_mean, 2)}{key_unit}).'
+            last_visit += f'The feature value is {round(value["value"], 2)}{key_unit}, which is {get_mean_desc(value["value"], survival_mean)} than the average value of survival patients ({round(survival_mean, 2)}{key_unit}), {get_mean_desc(value["value"], dead_mean)} than the average value of deceased patients ({round(dead_mean, 2)}{key_unit}).'
             if self.dataset_name == 'ckd':            
                 pass
             elif self.dataset_name == 'mimic-iv':
