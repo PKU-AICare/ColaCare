@@ -1,5 +1,35 @@
 from liquid import Template
 
+revise_logits_system = """You are an authoritative expert in the medical field. You are organizing a collaborative consultation. After the discussion, you will get a consistent analysis report on the patient. Your task is to refer to each doctor's initial diagnosis of the patient and the conclusion of the analysis report to output your final prediction of the patient's illness.
+"""
+
+revise_logits_user = Template("""Initially, all doctors made predictions about the probability of the patient getting the disease and explained their reasons, as shown below:
+{{doctor_info}}     
+
+Then, in a collaborative consultation, you organized all doctors to get a consistent analysis report on the patient. The report includes:
+(1) Your judgment on whether the patient is ill
+(2) Reasons and evidence to support your conclusion
+As follows:
+{{latest_info}}              
+
+You need to make fine adjustments to the initial predictions of the patient's probability of illness by several doctors based on the results of the collaborative consultation. 
+The specific explanation is as follows:
+Doctor 0 thought the probability of the patient getting the disease was x. 
+Doctor 1 thought the probability of the patient getting the disease was y.
+Doctor 2 ...
+Based on the collaborative consultation, you considered the logits x, the logits y and the consistent analysis report. And finally, make a final prediction of the patient's illness as refined logits z.
+
+Please output in the following json format:
+{"Doctor 0's Logit": ..., "Doctor 1's Logit": ..., ..., "Final Logit": ...}
+
+Please respond in JSON format without any additional content:
+""")
+
+initial_doctor_for_revise = Template("""He thinks the probability that the patient is ill is: {{diagnosis}}.
+Then, he briefly analyzed the patient's basic condition: {{analysis}}                                 
+"""    
+)           
+
 initial_doctor_summary = Template("""He thinks the probability that the patient is ill is: {{diagnosis}}.
 He first briefly analyzed the patient's basic condition: {{analysis}}
 Then, he listed some evidence as the basis for my diagnosis of this patient: {{evidence}}"""
@@ -73,8 +103,8 @@ Next, please write a summary report including the following:
 (3) List of supporting evidence: [Doctor 0's opinion or relevant literature retrieved, Doctor 1's opinion or relevant literature retrieved, ...].
 
 Here are two examples of the format you should output:
-{"Answer":"In my opinion, the patient is more probably to have the disease", "Report": "...", "Evidences": ["Doctor 0's ... ", "Doctor 1's ..."]}.
-{"Answer":"In my opinion, the patient is more probably to not have the disease", "Report": "...", "Evidences": ["Doctor 0's ... ", "Doctor 1's ..."]}.
+{"Answer":"In my opinion, the patient has a high risk of mortality.", "Report": "...", "Evidences": ["Doctor 0's ... ", "Doctor 1's ..."]}.
+{"Answer":"In my opinion, the patient has a low risk of mortality.", "Report": "...", "Evidences": ["Doctor 0's ... ", "Doctor 1's ..."]}.
 
 Please respond in JSON format without any additional content:"""
 )
@@ -101,8 +131,8 @@ Please output the following three contents in JSON format:
 The format of the reason for revision is: which doctor's opinion or relevant literature did you refer to, and which original opinion did you modify.
 
 Here are two examples of the format you should output:
-{"Answer": "In my opinion, the patient is more probably to have the disease", "Report": "...", "Reasons": ["reason1 ...", "reason2 ..."]}
-{"Answer": "In my opinion, the patient is more probably to not have the disease", "Report": "...", "Reasons": ["reason1 ...", "reason2 ..."]}
+{"Answer": "In my opinion, the patient has a high risk of mortality.", "Report": "...", "Reasons": ["reason1 ...", "reason2 ..."]}
+{"Answer": "In my opinion, the patient has a low risk of mortality.", "Report": "...", "Reasons": ["reason1 ...", "reason2 ..."]}
 
 Please respond in JSON format without any additional content:"""
 )
@@ -126,16 +156,22 @@ Here is an example of the format you should output:
 Please respond in JSON format without any additional content:
 ''')
 
-doctor_collaboration_system = '''You are an experienced medical expert participating in a consultation with several other medical experts for an ICU patient. The consultation organizer has generated a summary report based on all experts' analyses of the patient. Please provide your opinion on this report.'''
+doctor_collaboration_system = '''You are an experienced medical expert participating in a consultation with several other medical experts for an ICU patient. The consultation organizer has generated a summary report based on all experts' analyses of the patient. Please provide your viewpoint on his opinion.'''
 
 doctor_collaboration_user = Template('''Here is the relevant medical knowledge:
 {{context}}
+
+Here is your initial analysis of the patient:
+{{analysis}}
+
+Here is the opinion of the consultation organizer:
+{{opinion}}
 
 Here is the summary report generated by the consultation organizer:
 {{report}}
 
 You need to provide your opinion on the summary report generated by the consultation organizer. Please output the following two contents in JSON format:
-(1) Your opinion on the summary report, respond with "agree" or "disagree".
+(1) Your viewpoint on the opinion of the consultation organizer, i.e. the patient's risk is either high or low, respond with "agree" or "disagree".
 (2) The confidence level of your opinion, respond with a number between 0 and 1.
 (3) The reason for your opinion.
 (4) If you disagree, the evidence you used to support your opinion. Please choose from the medical knowledge I provide as your evidence.
