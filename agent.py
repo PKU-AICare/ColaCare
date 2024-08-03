@@ -262,10 +262,18 @@ class LeaderAgent(Agent):
         return content
 
 
-def extract_and_parse_json(text):
+def extract_and_parse_json(text: str):
     pattern_backticks = r'```json(.*?)```'
     match = re.search(pattern_backticks, text, re.DOTALL)
+    if match:
+        json_string = match.group(1).strip()
+        try:
+            return json.loads(json_string)
+        except json.JSONDecodeError:
+            print(json_string)
+            raise ValueError("Invalid JSON content found.")
     
+    match = re.search(pattern_backticks, text.strip() + "\"]}```", re.DOTALL)
     if match:
         json_string = match.group(1).strip()
         try:
@@ -283,5 +291,6 @@ def extract_and_parse_json(text):
         except json.JSONDecodeError:
             print(json_string)
             raise ValueError("Invalid JSON content found.")
-
+    
+    print(text)
     raise ValueError("No valid JSON content found.")
