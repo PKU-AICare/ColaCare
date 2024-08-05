@@ -28,7 +28,7 @@ def bootstrap(preds, labels, K=100, seed=42):
 
 
 def export_metrics(bootstrapped_samples):
-    metrics = {"accuracy": [], "auroc": [], "auprc": [], "f1": [], "minpse": []}
+    metrics = {"accuracy": [], "auroc": [], "auprc": [], "minpse": []}
     for sample in bootstrapped_samples:
         sample_preds, sample_labels = sample[0], sample[1]
         res = get_binary_metrics(sample_preds, sample_labels)

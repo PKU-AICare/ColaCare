@@ -43,7 +43,7 @@ def load_preds(config):
 def check_numbers(dataset, mode, nums):
     if dataset == 'mimic-iv':
         if mode == 'test':
-            if max(nums) - min(nums) > 0.3 and any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
+            if max(nums) - min(nums) > 0.4 or any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
                 return True
         elif mode == 'val':
             if max(nums) - min(nums) > 0.4 or any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
