@@ -41,6 +41,7 @@ class DoctorAgent(Agent):
         dataset_name: str = "cdsl",
         ehr_model_name: str = "MCGRU",
         seed: int = 1,
+        mode: str = "test",
         retrieval_system: RetrievalSystem = None,
         llm_name: str = "deepseek-chat",
     ) -> None:
@@ -48,7 +49,7 @@ class DoctorAgent(Agent):
         
         self.client = OpenAI(api_key=self.llm_config["api_key"], base_url=self.llm_config["api_base"])
         self.retrieval_system = retrieval_system
-        self.context_builder = ContextBuilder(dataset_name=dataset_name, model_name=ehr_model_name, seed=seed)
+        self.context_builder = ContextBuilder(dataset_name=dataset_name, model_name=ehr_model_name, seed=seed, mode=mode)
 
     def analysis(self, patient_index: int, patient_id: int) -> Dict[str, str]:
         basic_context, subcontext, healthcare_context = self.context_builder.generate_context(patient_index, patient_id)
@@ -266,31 +267,31 @@ def extract_and_parse_json(text: str):
     pattern_backticks = r'```json(.*?)```'
     match = re.search(pattern_backticks, text, re.DOTALL)
     if match:
-        json_string = match.group(1).strip()
+        json_string = match.group(1).strip().replace("\n", "")
         try:
             return json.loads(json_string)
         except json.JSONDecodeError:
             print(json_string)
-            raise ValueError("Invalid JSON content found.")
+            raise ValueError("Invalid JSON content found in match1.")
     
     match = re.search(pattern_backticks, text.strip() + "\"]}```", re.DOTALL)
     if match:
-        json_string = match.group(1).strip()
+        json_string = match.group(1).strip().replace("\n", "")
         try:
             return json.loads(json_string)
         except json.JSONDecodeError:
             print(json_string)
-            raise ValueError("Invalid JSON content found.")
+            raise ValueError("Invalid JSON content found in match 2.")
     
     pattern_json_object = r'\{.*?\}'
     match = re.search(pattern_json_object, text, re.DOTALL)
     if match:
-        json_string = match.group(0).strip()
+        json_string = match.group(0).strip().replace("\n", "")
         try:
             return json.loads(json_string)
         except json.JSONDecodeError:
             print(json_string)
-            raise ValueError("Invalid JSON content found.")
+            raise ValueError("Invalid JSON content found in match 3.")
     
     print(text)
     raise ValueError("No valid JSON content found.")
