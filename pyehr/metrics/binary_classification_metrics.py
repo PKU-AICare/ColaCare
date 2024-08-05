@@ -17,6 +17,9 @@ def get_binary_metrics(preds, labels):
     auprc = AveragePrecision(task="binary")
 
     # convert labels type to int
+    if not isinstance(labels, torch.Tensor):
+        labels = torch.tensor(labels)
+        preds = torch.tensor(preds)
     labels = labels.type(torch.int)
     accuracy(preds, labels)
     auroc(preds, labels)
