@@ -7,13 +7,18 @@ import numpy as np
 from .datasets_info import *
 
 
-def get_data_from_files(data_url: str, model: str, seed: int, patient_index: int):
-    x = pd.read_pickle(os.path.join(data_url, "test_x.pkl"))[patient_index]
-    raw_x = pd.read_pickle(os.path.join(data_url, "test_raw_x.pkl"))[patient_index]
+def get_data_from_files(data_url: str, model: str, seed: int, mode: str, patient_index: int):
+    if mode == 'test':
+        x = pd.read_pickle(os.path.join(data_url, "test_x.pkl"))[patient_index]
+        raw_x = pd.read_pickle(os.path.join(data_url, "test_raw_x.pkl"))[patient_index]
+        y = pd.read_pickle(os.path.join(data_url, f"{model}_seed{seed}_output.pkl"))[patient_index]
+        important_features = pd.read_pickle(os.path.join(data_url, f"{model}_seed{seed}_features.pkl"))[patient_index]
+    elif mode == 'val':
+        x = pd.read_pickle(os.path.join(data_url, "sub_test_x.pkl"))[patient_index]
+        raw_x = pd.read_pickle(os.path.join(data_url, "sub_test_raw_x.pkl"))[patient_index]
+        y = pd.read_pickle(os.path.join(data_url, f"{model}_seed{seed}_output2.pkl"))[patient_index]
+        important_features = pd.read_pickle(os.path.join(data_url, f"{model}_seed{seed}_features2.pkl"))[patient_index]
     features = pd.read_pickle(os.path.join(data_url, "labtest_features.pkl"))
-    
-    y = pd.read_pickle(os.path.join(data_url, f"{model}_seed{seed}_output.pkl"))[patient_index]
-    important_features = pd.read_pickle(os.path.join(data_url, f"{model}_seed{seed}_features.pkl"))[patient_index]
     return x, raw_x, features, y, important_features
 
 
@@ -145,12 +150,12 @@ def generate_prompt(dataset: str, data_url: str, patient_index: int, patient_id:
 
 
 class ContextBuilder:
-    def __init__(self, dataset_name: str, model_name: str, seed: int) -> None:
+    def __init__(self, dataset_name: str, model_name: str, seed: int, mode: str) -> None:
         self.dataset_name = dataset_name
         self.dataset_dir = f"ehr_datasets/{dataset_name}/processed/fold_1"
         self.model_name = model_name
         self.seed = seed
-
+        self.mode = mode
 
     def generate_context(self, patient_index: int, patient_id):
         """Generate healthcare context for the patient.
@@ -185,7 +190,7 @@ class ContextBuilder:
             age = basic_data["Age"]
             basic_context = f"This {gender} patient, aged {age}, is an patient in Intensive Care Unit (ICU).\n"
 
-        _, raw_x, features, y, important_features = get_data_from_files(self.dataset_dir, self.model_name, self.seed, patient_index)
+        _, raw_x, features, y, important_features = get_data_from_files(self.dataset_dir, self.model_name, self.seed, self.mode, patient_index)
         
         if self.dataset_name == 'mimic-iv':
             raw_x = np.array(raw_x)[:, 2 + 47:]
