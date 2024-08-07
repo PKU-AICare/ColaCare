@@ -2,7 +2,6 @@ import torch
 from torchmetrics import AUROC, Accuracy, AveragePrecision
 from torchmetrics.classification import BinaryF1Score
 import numpy as np
-import pandas as pd
 from sklearn import metrics as sklearn_metrics
 
 
@@ -25,14 +24,12 @@ def get_binary_metrics(preds, labels):
     auprc(preds, labels)
     f1(preds, labels)
 
-    minpse_score = minpse(preds, labels) 
-
     # return a dictionary
     return {
         "accuracy": accuracy.compute().item(),
         "auroc": auroc.compute().item(),
         "auprc": auprc.compute().item(),
-        "minpse": minpse_score,
+        "f1": f1.compute().item(),
     }
 
 
@@ -70,7 +67,7 @@ def bootstrap(preds, labels, K=100, seed=42):
 
 
 def export_metrics(bootstrapped_samples):
-    metrics = {"accuracy": [], "auprc": [], "auroc": [], "minpse": []}
+    metrics = {"accuracy": [], "auprc": [], "auroc": [], "f1": []}
     for sample in bootstrapped_samples:
         sample_preds, sample_labels = sample[0], sample[1]
         res = get_binary_metrics(sample_preds, sample_labels)
