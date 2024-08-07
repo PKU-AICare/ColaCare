@@ -1,16 +1,22 @@
 # New
 ehr_datasets/
-config.py
 logs/
 response/
 corpus/
 retriever/
 output/
+output_bk/
+pyehr/ehrdatasets/
+pyehr/configs/
 lm/
 PrimeNet/
 Warpformer/
 *.ipynb
+*.csv
 hparams.py
+perf.py
+process_testresults.py
+config.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
