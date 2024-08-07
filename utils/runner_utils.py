@@ -41,7 +41,7 @@ def load_preds(config):
 
 
 def check_numbers(dataset, mode, nums):
-    if dataset == 'mimic-iv':
+    if dataset in ['mimic-iv', 'mimic-iii']:
         if mode == 'test':
             if max(nums) - min(nums) > 0.4 or any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
                 return True
