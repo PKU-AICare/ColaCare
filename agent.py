@@ -51,7 +51,7 @@ class DoctorAgent(Agent):
         self.retrieval_system = retrieval_system
         self.context_builder = ContextBuilder(dataset_name=dataset_name, model_name=ehr_model_name, seed=seed, mode=mode)
 
-    def analysis(self, patient_index: int, patient_id: int) -> Dict[str, str]:
+    def analysis(self, patient_index: int, patient_id: int, save_file: str) -> Dict[str, str]:
         basic_context, subcontext, healthcare_context = self.context_builder.generate_context(patient_index, patient_id)
         context = self.retrieve(subcontext, k=16)
         
@@ -65,6 +65,9 @@ class DoctorAgent(Agent):
         ])
         self.latest_analysis = ans["Analysis"]
         self.initial_analysis = ans["Analysis"]
+        
+        json.dump(user_prompt, open(save_file, "w"))
+        
         return ans, basic_context
     
     def collaboration(self, leader_opinion, leader_report) -> Dict[str, str]:
