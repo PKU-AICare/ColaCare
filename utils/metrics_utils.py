@@ -32,7 +32,6 @@ def get_binary_metrics(preds, labels):
         "accuracy": accuracy.compute().item(),
         "auroc": auroc.compute().item(),
         "auprc": auprc.compute().item(),
-        "f1": f1.compute().item(),
         "minpse": minpse_score,
     }
 
@@ -71,7 +70,7 @@ def bootstrap(preds, labels, K=100, seed=42):
 
 
 def export_metrics(bootstrapped_samples):
-    metrics = {"accuracy": [], "auroc": [], "auprc": [], "f1": [], "minpse": []}
+    metrics = {"accuracy": [], "auprc": [], "auroc": [], "minpse": []}
     for sample in bootstrapped_samples:
         sample_preds, sample_labels = sample[0], sample[1]
         res = get_binary_metrics(sample_preds, sample_labels)
@@ -93,11 +92,3 @@ def run_bootstrap(preds, labels, K=100, seed=42):
     bootstrap_samples = bootstrap(preds, labels, K=K, seed=seed)
     metrics = export_metrics(bootstrap_samples)
     return metrics
-
-
-if __name__ == "__main__":
-    preds = torch.tensor([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.99])
-    labels = torch.tensor([0, 0, 0, 0, 1, 1, 1, 1, 1, 1])
-    metrics = run_bootstrap(preds, labels, K=100, seed=42)
-    metrics = pd.DataFrame({k: f"{v['mean']*100:.2f} ± {v['std']*100:.2f}" for k, v in metrics.items()}, index=[0])
-    print(metrics)
