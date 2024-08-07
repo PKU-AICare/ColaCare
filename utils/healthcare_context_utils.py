@@ -91,7 +91,7 @@ def format_input_ehr(raw_x: List[List[float]], features: List[str]):
 
 
 def generate_prompt(dataset: str, data_url: str, patient_index: int, patient_id: int):
-    if dataset == 'ckd':
+    if dataset == 'esrd':
         basic_data = pd.read_pickle(os.path.join(data_url, 'basic.pkl'))[patient_id]
         gender = "male" if basic_data["Gender"] == 1 else "female"
         age = basic_data["Age"]
@@ -167,7 +167,7 @@ class ContextBuilder:
         Returns:
             List[str]: The healthcare context for the patient.
         """
-        if self.dataset_name == 'ckd':
+        if self.dataset_name == 'esrd':
             basic_data = pd.read_pickle(os.path.join(self.dataset_dir, 'basic.pkl'))[patient_id]
             gender = "male" if basic_data["Gender"] == 1 else "female"
             age = basic_data["Age"]
@@ -209,7 +209,7 @@ class ContextBuilder:
             survival_mean = survival_stats[key]['mean']
             dead_mean = dead_stats[key]['mean']
             key_name = medical_name[key] if key in medical_name else key
-            if self.dataset_name == 'ckd':            
+            if self.dataset_name == 'esrd':            
                 key_unit = ' ' + medical_unit[key] if key in medical_unit else ''
             elif self.dataset_name == 'mimic-iv':
                 key_unit = ' ' + mimic_unit[key] if key in mimic_unit else ''
@@ -220,13 +220,13 @@ class ContextBuilder:
                 last_visit += f'importance weight of {round(float(value["attention"]), 3)} out of 1.0. '
             else:
                 last_visit += f'shap value of {round(float(value["attention"]), 3)}. '
-            last_visit += f'The feature value is {round(value["value"], 2)}{key_unit}, which is {get_mean_desc(value["value"], survival_mean)} than the average value of survival patients ({round(survival_mean, 2)}{key_unit}), {get_mean_desc(value["value"], dead_mean)} than the average value of deceased patients ({round(dead_mean, 2)}{key_unit}).'
-            if self.dataset_name == 'ckd':            
-                pass
+            last_visit += f'The feature value is {round(value["value"], 2)}{key_unit}, which is {get_mean_desc(value["value"], survival_mean)} than the average value of survival patients ({round(survival_mean, 2)}{key_unit}), {get_mean_desc(value["value"], dead_mean)} than the average value of deceased patients ({round(dead_mean, 2)}{key_unit}).\n'
+            if self.dataset_name == 'esrd':            
+                last_visit += f" The reference range is {medical_standard[key][0]}{key_unit} to {medical_standard[key][1]}{key_unit}.\n" if key in medical_standard else ""
             elif self.dataset_name == 'mimic-iv':
                 last_visit += f" The reference range is {mimic_range[key]}.\n" if key in mimic_range else ""
             else:
-                last_visit += "\n"
+                pass
         last_visit_context = last_visit + '\n'
 
         subcontext = basic_context + last_visit_context
@@ -236,6 +236,6 @@ class ContextBuilder:
     
     
 if __name__ == '__main__':
-    builder = ContextBuilder('mimic-iv', 'ConCare', 1)
-    basic_context, subcontext, hcontext = builder.generate_context(0, '10004401_2')
+    builder = ContextBuilder('esrd', 'AdaCare', 0, 'test')
+    basic_context, subcontext, hcontext = builder.generate_context(0, 108)
     print(hcontext)
