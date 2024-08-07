@@ -63,6 +63,15 @@ class DlPipeline(L.LightningModule):
             embedding = self.ehr_encoder(x, mask).to(x.device)
             y_hat = self.head(embedding)
             return y_hat, embedding
+        elif self.model_name == "MTAN":
+            embedding = self.ehr_encoder(x).to(x.device)
+            y_hat = self.head(embedding)
+            return y_hat, embedding
+        elif self.model_name == "Warpformer":
+            mask = generate_mask(lens).unsqueeze(2).repeat(1, 1, self.input_dim).to(x.device)
+            embedding = self.ehr_encoder(x, x, mask).to(x.device)
+            y_hat = self.head(embedding)
+            return y_hat, embedding
         elif self.model_name in ["GRU", "LSTM", "RNN", "MLP"]:
             embedding = self.ehr_encoder(x).to(x.device)
             y_hat = self.head(embedding)
@@ -72,6 +81,7 @@ class DlPipeline(L.LightningModule):
             embedding = self.ehr_encoder(x_lab, x_demo).to(x.device)
             y_hat = self.head(embedding)
             return y_hat, embedding
+
 
     def _get_loss(self, x, y, lens):
         if self.model_name == "ConCare":
