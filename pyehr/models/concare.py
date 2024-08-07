@@ -662,16 +662,18 @@ class ConCare(nn.Module):
         """
         # rnn will only apply dropout between layers
         batch_size, time_steps, _ = x.size()
-        out = torch.zeros((batch_size, time_steps, self.hidden_dim))
-        feature_attn = torch.zeros((batch_size, time_steps, self.lab_dim))
-        decov_loss = 0
-        for cur_time in range(time_steps):
-            cur_x = x[:, :cur_time+1, :]
-            cur_mask = mask[:, :cur_time+1]
-            cur_out, decov, cur_feature_attn = self.concare_layer(cur_x, static, cur_mask)
-            out[:, cur_time, :] = cur_out
-            feature_attn[:, cur_time, :] = cur_feature_attn[:, :self.lab_dim]
-            decov_loss += decov
-        decov_loss /= time_steps
+        # out = torch.zeros((batch_size, time_steps, self.hidden_dim))
+        # feature_attn = torch.zeros((batch_size, time_steps, self.lab_dim))
+        # decov_loss = 0
+        # for cur_time in range(time_steps):
+        #     cur_x = x[:, :cur_time+1, :]
+        #     cur_mask = mask[:, :cur_time+1]
+        #     cur_out, decov, cur_feature_attn = self.concare_layer(cur_x, static, cur_mask)
+        #     out[:, cur_time, :] = cur_out
+        #     feature_attn[:, cur_time, :] = cur_feature_attn[:, :self.lab_dim]
+        #     decov_loss += decov
+        # decov_loss /= time_steps
+        
+        out, decov_loss, feature_attn = self.concare_layer(x, static, mask)
         out = self.dropout(out)
         return out, decov_loss, feature_attn
