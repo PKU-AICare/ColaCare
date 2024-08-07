@@ -126,8 +126,11 @@ You need to consider all the doctors' new ideas and modify your original summary
 
 Please output the following three contents in JSON format:
 1. Your statement of mortality risk of the patient.
-2. Your revised summary report.
+2. Your revised summary report. Please create a concise and clear summary of the patient's health status. Your summary should be informative and beneficial for healthcare prediction tasks, such as in-hospital mortality prediction.
 3. Your reasons for revision in JSON format. The format of the reason for revision is: which doctor's opinion or relevant literature did you refer to, and which original opinion did you modify.
+
+Here is an example of the revised summary report:
+35-year-old female was diagnosed with chronic glomerulonephritis five years ago. Chronic kidney disease progressed to end stage renal disease (ESRD) over last year. Client was started on automated peritoneal dialysis six months ago. She developed fever, vomiting, and abdominal pain 1 day ago. Current assessment: T 39.1 °C, (102.40 F), HR 104, RR 16, B/P 145/ 87 mmHg. Weight: 66.8 Kg/147 lbs. NKDA. Periumbilical tenderness, defense and rebound. Erythema and creamy, yellow exudate around peritoneal dialysis catheter exit site. Dialysate effluent is cloudy yellow. Peritoneal effluent culture was obtained. Labs sent. The patient's complex medical history and the presence of multiple comorbidities suggest a high risk for in-hospital mortality. Close monitoring and management of these conditions are critical for patient outcomes.
 
 Here are two examples of the format you should output:
 {"Answer": "In my opinion, the patient has a high risk of mortality.", "Report": "...", "Reasons": ["reason1 ...", "reason2 ..."]}
