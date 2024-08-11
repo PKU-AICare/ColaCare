@@ -12,11 +12,78 @@ ColaCare is a framework that enhances Electronic Health Record (EHR) modeling by
 
 ## Environmental Setups
 
-[Provide instructions for setting up the project, including dependencies and environment setup]
+- Create an environment `colacare` and activate it.
+
+```bash
+conda create -n colacare python=3.9
+conda activate colacare
+```
+
+- Install the required packages.
+
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 
-[Explain how to use the ColaCare framework, including any necessary configuration steps and example code snippets]
+### Training EHR models in pyehr
+
+- Run the following command to train the EHR models and obtain feature importance scores in `pyehr` directory.
+
+```bash
+cd pyehr
+python train_test.py
+python importance.py
+```
+
+> More details about the pre-processing and training steps can be found in the [`pyehr`](https://github.com/yhzhu99/pyehr) repository.
+
+### Running LLM-based Multi-Agent Collaboration
+
+- Write a configuration file for the multi-agent collaboration framework. 
+
+```python
+# hparams.py
+
+mimic_config = {
+    "retriever_name" : "MedCPT",
+    "corpus_name" : "MSD",
+    "llm_name" : "deepseek-chat",
+    "epochs" : 50,
+    "patience" : 10,
+    "ehr_dataset_name" : 'mimic-iv',
+    "ehr_dataset_dir" : './ehr_datasets/mimic-iv/processed/fold_1',
+    "ehr_model_names" : ['AdaCare', 'MCGRU', 'RETAIN'], 
+    "seeds": [0, 0, 0],
+    "doctor_num" : 3,
+    "max_round" : 3,
+    "ehr_embed_dim": 128,
+    "text_embed_dim": 1024,
+    "merge_embed_dim": 128,
+    "learning_rate": 1e-3,
+    "main_metric": "auprc",
+    "batch_size": 32,
+    "mode": "test"
+}
+```
+
+- Run the following command to start the multi-agent collaboration framework.
+
+```bash
+python pipeline.py
+```
+
+> The results can be found in the `output` directory.
+
+### Training Fusion Network 
+
+- Run the following command to train the fusion network.
+
+```bash
+python process_output.py
+python train_fusion.py
+```
 
 ## Datasets
 
