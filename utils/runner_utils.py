@@ -1,10 +1,4 @@
-import torch
-import torch.nn as nn
 import pandas as pd
-
-def get_loss(pred, truth) -> torch.Tensor:
-    return nn.BCELoss()(pred, truth)
-
 
 def load_data(config):
     data_url = config['ehr_dataset_dir']
