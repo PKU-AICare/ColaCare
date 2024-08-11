@@ -13,11 +13,11 @@ from pipelines import DlPipeline, MlPipeline
 
 
 def run_ml_experiment(config):
-    los_config = get_los_info(f'/home/wangzixiang/ColaCare/ehr_datasets/{config["dataset"]}/processed/fold_{config["fold"]}')
+    los_config = get_los_info(f'/ColaCare/ehr_datasets/{config["dataset"]}/processed/fold_{config["fold"]}')
     config.update({"los_info": los_config})
 
     # data
-    dm = EhrDataModule(f'/home/wangzixiang/ColaCare/ehr_datasets/{config["dataset"]}/processed/fold_{config["fold"]}', batch_size=config["batch_size"])
+    dm = EhrDataModule(f'/ColaCare/ehr_datasets/{config["dataset"]}/processed/fold_{config["fold"]}', batch_size=config["batch_size"])
     # logger
     checkpoint_filename = f'{config["model"]}-fold{config["fold"]}-seed{config["seed"]}'
     logger = CSVLogger(save_dir="logs", name=f'train/{config["dataset"]}/{config["task"]}', version=checkpoint_filename)
@@ -34,12 +34,23 @@ def run_ml_experiment(config):
     return perf, outs
 
 
+def get_checkpoint_filename(ckpt_dir: str):
+    filenames = [f for f in os.listdir(ckpt_dir) if f.endswith(".ckpt")]
+    if len(filenames) == 1:
+        filename = filenames[0]
+    else:
+        filenames.remove("best.ckpt") if "best.ckpt" in filenames else None
+        filename = list(sorted(filenames, key=lambda x: int(x.split('-')[-1].split('.')[0][1:])))[-1]
+    return f"{ckpt_dir}/{filename}"
+
+
 def run_dl_experiment(config):
-    los_config = get_los_info(f'/home/wangzixiang/ColaCare/ehr_datasets/{config["dataset"]}/processed/fold_{config["fold"]}')
-    config.update({"los_info": los_config})
+    if config["task"] == "los":
+        los_config = get_los_info(f'ColaCare/ehr_datasets/{config["dataset"]}/processed/fold_{config["fold"]}')
+        config.update({"los_info": los_config})
 
     # data
-    dm = EhrDataModule(f'/home/wangzixiang/ColaCare/ehr_datasets/{config["dataset"]}/processed/fold_{config["fold"]}', batch_size=config["batch_size"])
+    dm = EhrDataModule(f'ColaCare/ehr_datasets/{config["dataset"]}/processed/fold_{config["fold"]}', batch_size=config["batch_size"])
     # logger
     checkpoint_filename = f'{config["model"]}-fold{config["fold"]}-seed{config["seed"]}'
     if "time_aware" in config and config["time_aware"] == True:
@@ -64,7 +75,7 @@ def run_dl_experiment(config):
     trainer.fit(pipeline, dm)
     best_model_path = checkpoint_callback.best_model_path
 
-    # best_model_path = f'logs/train/{config["dataset"]}/{config["task"]}/{config["model"]}-fold{config["fold"]}-seed{config["seed"]}/checkpoints/best.ckpt'
+    # best_model_path = get_checkpoint_filename(f'logs/train/{config["dataset"]}/{config["task"]}/{config["model"]}-fold{config["fold"]}-seed{config["seed"]}/checkpoints')
     pipeline = DlPipeline.load_from_checkpoint(best_model_path, config=config)
     trainer.test(pipeline, dm)
 
@@ -92,12 +103,12 @@ if __name__ == "__main__":
                 os.makedirs(save_dir, exist_ok=True)
                 print(config)
                 perf, outs = run_func(config)
+                print(perf)
                 metrics = run_bootstrap(outs['preds'], outs['labels'])
                 metrics = {k: f"{v['mean']*100:.2f} ± {v['std']*100:.2f}" for k, v in metrics.items()}
                 metrics_df = pd.DataFrame({'model': config["model"], **metrics}, index=[i])
+                print(metrics_df)
+                pd.to_pickle(perf, f'{save_dir}/perf2.pkl')
+                pd.to_pickle(outs, f'{save_dir}/outs2.pkl')
                 all_df = pd.concat([all_df, metrics_df], axis=0)
-    all_df.to_csv(f'{config["dataset"]}_metrics.csv', index=False)
-                # pd.to_pickle(perf, f'{save_dir}/perf2.pkl')
-                # pd.to_pickle(outs, f'{save_dir}/outs2.pkl')
-                # preds = outs['preds'].tolist()
-                # pd.to_pickle(preds, f"ehrdatasets/{config['dataset']}/processed/fold_{config['fold']}/{config['model']}_seed{config['seed']}_output2.pkl")
+    # all_df.to_csv(f'{config["dataset"]}_metrics2.csv', index=False)
