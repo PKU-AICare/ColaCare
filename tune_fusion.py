@@ -2,16 +2,14 @@ import os
 import lightning as L
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger
-
-import ipdb
 import pandas as pd
 import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
 
-from utils.metrics_utils import get_binary_metrics, check_metric_is_better
-from hparams import mimic_config as config
-from decision_model import Decision
+from utils.metrics_utils import get_binary_metrics, check_metric_is_better, run_bootstrap
+from hparams import config
+from fusion import Fusion
 
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 torch.cuda.empty_cache()
@@ -24,7 +22,7 @@ class MyDataset(Dataset):
         self.text_embeddings = pd.read_pickle(os.path.join(data_path, f"{mode}_text.pkl"))
         self.y = pd.read_pickle(os.path.join(data_path, f"{mode}_y.pkl"))
         self.pids = pd.read_pickle(os.path.join(data_path, f"{mode}_pids.pkl"))
-
+        
     def __len__(self):
         return len(self.y)
 
@@ -60,7 +58,7 @@ class Pipeline(L.LightningModule):
         self.learning_rate = config["learning_rate"]
         self.main_metric = config["main_metric"]
         self.output_dim = 1
-        self.model = Decision(ehr_embed_dim=config["ehr_embed_dim"], ehr_num=config["doctor_num"], text_embed_dim=config["text_embed_dim"], merge_embed_dim=config["merge_embed_dim"], output_dim=self.output_dim)
+        self.model = Fusion(ehr_embed_dim=config["ehr_embed_dim"], ehr_num=config["doctor_num"], text_embed_dim=config["text_embed_dim"], merge_embed_dim=config["merge_embed_dim"], output_dim=self.output_dim)
         self.loss_fn = nn.BCELoss()
 
         self.cur_best_performance = {} # val set
@@ -154,7 +152,7 @@ def run_experiment(config):
 
     # train/val/test
     pipeline = Pipeline(config)
-    trainer = L.Trainer(accelerator="gpu", devices=[1], max_epochs=config["epochs"], logger=logger, callbacks=[checkpoint_callback])
+    trainer = L.Trainer(accelerator="gpu", devices=[1], max_epochs=config["epochs"], logger=logger, callbacks=[early_stopping_callback, checkpoint_callback])
     trainer.fit(pipeline, dm)
 
     # Load best model checkpoint
@@ -169,10 +167,9 @@ def run_experiment(config):
 
 
 if __name__ == "__main__":
-    print(torch.cuda.is_available())
-    perf, outs = run_experiment(config)
-    save_dir = f"logs/fusion/{config['ehr_dataset_name']}/{'-'.join(config['ehr_model_names'])}_{config['llm_name']}_{config['corpus_name']}"
-    os.makedirs(save_dir, exist_ok=True)
-    pd.to_pickle(perf, f"{save_dir}/perf.pkl")
-    pd.to_pickle(outs, f"{save_dir}/outs.pkl")
-    print(config, perf)
+    for hparam in config:
+        print(hparam)
+        perf, outs = run_experiment(hparam)
+        metrics = run_bootstrap(outs['y_pred'], outs['y_true'])
+        metrics = {k: f"{v['mean']*100:.2f} ± {v['std']*100:.2f}" for k, v in metrics.items()}
+        print(pd.DataFrame(metrics, index=[0]))
