@@ -5,7 +5,7 @@ from .grasp import GRASP
 from .m3care import M3Care
 from .mcgru import MCGRU
 from .mtan import MTAN
+from .primenet import PrimeNet
 from .retain import RETAIN
 from .rnn import RNN
 from .transformer import Transformer
-from .warpformer import Warpformer
