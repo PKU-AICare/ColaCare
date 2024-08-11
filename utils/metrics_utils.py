@@ -29,6 +29,7 @@ def get_binary_metrics(preds, labels):
         "accuracy": accuracy.compute().item(),
         "auroc": auroc.compute().item(),
         "auprc": auprc.compute().item(),
+        "minpse": minpse(preds, labels),
         "f1": f1.compute().item(),
     }
 
@@ -67,7 +68,7 @@ def bootstrap(preds, labels, K=100, seed=42):
 
 
 def export_metrics(bootstrapped_samples):
-    metrics = {"accuracy": [], "auprc": [], "auroc": [], "f1": []}
+    metrics = {"accuracy": [], "auprc": [], "auroc": [], "minpse": [], "f1": []}
     for sample in bootstrapped_samples:
         sample_preds, sample_labels = sample[0], sample[1]
         res = get_binary_metrics(sample_preds, sample_labels)
