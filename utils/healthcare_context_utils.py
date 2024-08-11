@@ -7,7 +7,7 @@ import numpy as np
 from .datasets_info import *
 
 
-def get_data_from_files(data_url: str, model: str, seed: int, mode: str, patient_index: int):
+def get_data_from_files(data_url: str, model: str, seed: int, mode: str, patient_id, patient_index: int=0):
     if mode == 'test':
         x = pd.read_pickle(os.path.join(data_url, "test_x.pkl"))[patient_index]
         raw_x = pd.read_pickle(os.path.join(data_url, "test_raw_x.pkl"))[patient_index]
@@ -190,10 +190,12 @@ class ContextBuilder:
             age = basic_data["Age"]
             basic_context = f"This {gender} patient, aged {age}, is an patient in Intensive Care Unit (ICU).\n"
 
-        _, raw_x, features, y, important_features = get_data_from_files(self.dataset_dir, self.model_name, self.seed, self.mode, patient_index)
+        _, raw_x, features, y, important_features = get_data_from_files(self.dataset_dir, self.model_name, self.seed, self.mode, patient_id, patient_index)
         
-        if self.dataset_name == 'mimic-iv':
+        if self.dataset_name in ['mimic-iv', 'mimic-iii']:
             raw_x = np.array(raw_x)[:, 2 + 47:]
+        elif self.dataset_name == 'esrd':
+            raw_x = np.array(raw_x)[:, 4:]
         else:
             raw_x =  np.array(raw_x)[:, 2:]
         ehr_context = "Here is complete medical information from multiple visits of a patient, with each feature within this data as a string of values separated by commas.\n" + format_input_ehr(raw_x, features)
@@ -233,9 +235,3 @@ class ContextBuilder:
         hcontext = basic_context + '\n' + ehr_context + '\n' + last_visit_context
 
         return basic_context, subcontext, hcontext
-    
-    
-if __name__ == '__main__':
-    builder = ContextBuilder('esrd', 'AdaCare', 0, 'test')
-    basic_context, subcontext, hcontext = builder.generate_context(0, 108)
-    print(hcontext)
