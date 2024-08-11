@@ -6,9 +6,8 @@ corpus/
 retriever/
 output/
 output_bk/
-pyehr/ehrdatasets/
-pyehr/configs/
 lm/
+cost/
 PrimeNet/
 Warpformer/
 *.ipynb
