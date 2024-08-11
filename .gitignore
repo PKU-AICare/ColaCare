@@ -14,7 +14,6 @@ Warpformer/
 *.csv
 hparams.py
 perf.py
-process_testresults.py
 config.py
 
 # Byte-compiled / optimized / DLL files
