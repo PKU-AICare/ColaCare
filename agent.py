@@ -54,7 +54,6 @@ class DoctorAgent(Agent):
     def analysis(self, patient_index: int, patient_id: int, save_file: str) -> Dict[str, str]:
         basic_context, subcontext, healthcare_context = self.context_builder.generate_context(patient_index, patient_id)
         context = self.retrieve(subcontext, k=16)
-        
         self.patient_info = healthcare_context
         
         system_prompt = doctor_analysis_system
@@ -84,7 +83,7 @@ class DoctorAgent(Agent):
         context = self.retrieve(self.latest_analysis, k=16)
 
         system_prompt = doctor_collaboration_system
-        user_prompt = doctor_collaboration_user.render(context=context, analysis=self.initial_analysis, opinion=leader_opinion, report=leader_report)
+        user_prompt = doctor_collaboration_user.render(context=context, analysis=self.latest_analysis, opinion=leader_opinion, report=leader_report)
         
         ans = self.invoke(messages=[
             {"role": "system", "content": system_prompt},
@@ -104,10 +103,6 @@ class DoctorAgent(Agent):
             stream=False
         )
         content = response.choices[0].message.content
-        prompt_tokens = response.usage.prompt_tokens
-        completion_tokens = response.usage.completion_tokens
-        print(prompt_tokens, completion_tokens)
-        # self.add_message("assistant", content)
         ans = extract_and_parse_json(content)
         return ans
 
@@ -217,13 +212,11 @@ class LeaderAgent(Agent):
                 {"role": "system", "content": collaborative_summary_system},
                 {"role": "user", "content": collaborative_summary_user.render(doctor_info=doctors_answer_prompt, latest_info=self.current_report)}
             ]
-        
         response = self.client.chat.completions.create(
             model=self.llm_name,
             messages=messages,
             stream=False
         )
-
         content = response.choices[0].message.content
         content = extract_and_parse_json(content)
 
@@ -257,7 +250,6 @@ class LeaderAgent(Agent):
             messages=messages,
             stream=False
         )
-
         content = response.choices[0].message.content
         content = extract_and_parse_json(content)
 
