@@ -34,5 +34,6 @@ def get_binary_metrics(preds, labels):
         "accuracy": accuracy.compute().item(),
         "auroc": auroc.compute().item(),
         "auprc": auprc.compute().item(),
+        "minpse": minpse(preds, labels),
         "f1": f1.compute().item(),
     }
