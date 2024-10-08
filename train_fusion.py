@@ -8,8 +8,8 @@ from torch import nn
 from torch.utils.data import Dataset, DataLoader
 
 from utils.metrics_utils import get_binary_metrics, check_metric_is_better, run_bootstrap
-from hparams import config
-from fusion import Fusion
+from utils.hparams import config
+from utils.fusion import Fusion
 
 os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
 torch.cuda.empty_cache()
@@ -139,14 +139,16 @@ class Pipeline(L.LightningModule):
 
 def run_experiment(config):
     # data
-    dm = MyDataModule(batch_size=config["batch_size"], data_path=f"ehr_datasets/{config['ehr_dataset_name']}/processed/fold_1/fusion")
+    data_path = f"ehr_datasets/{config['ehr_dataset_name']}/processed/fold_1/fusion"
+    data_path += f"_{config['ehr_task']}"
+    dm = MyDataModule(batch_size=config["batch_size"], data_path=data_path)
 
     # logger
     logger = CSVLogger(save_dir="logs", name=f"fusion/{config['ehr_dataset_name']}/{'-'.join(config['ehr_model_names'])}_{config['llm_name']}_{config['corpus_name']}", flush_logs_every_n_steps=1)
 
     # EarlyStop and checkpoint callback
-    early_stopping_callback = EarlyStopping(monitor="auroc", patience=config["patience"], mode="max")
-    checkpoint_callback = ModelCheckpoint(filename="best", monitor="auroc", mode="max")
+    early_stopping_callback = EarlyStopping(monitor="auprc", patience=config["patience"], mode="max")
+    checkpoint_callback = ModelCheckpoint(filename="best", monitor="auprc", mode="max")
 
     L.seed_everything(42) # seed for reproducibility
 
@@ -167,9 +169,16 @@ def run_experiment(config):
 
 
 if __name__ == "__main__":
+    performance_table = {'dataset': [], 'task': [], 'auprc': [], 'auroc': [], 'minpse': [], 'accuracy': [], 'f1': []}
     for hparam in config:
-        print(hparam)
-        perf, outs = run_experiment(hparam)
-        metrics = run_bootstrap(outs['y_pred'], outs['y_true'])
-        metrics = {k: f"{v['mean']*100:.2f} ± {v['std']*100:.2f}" for k, v in metrics.items()}
-        print(pd.DataFrame(metrics, index=[0]))
+        for task in ['outcome', 'readmission']:
+            hparam['ehr_task'] = task
+            print(hparam)
+            perf, outs = run_experiment(hparam)
+            metrics = run_bootstrap(outs['y_pred'], outs['y_true'])
+            metrics = {k: f"{v['mean']*100:.2f}±{v['std']*100:.2f}" for k, v in metrics.items()}
+            performance_table['dataset'].append(hparam['ehr_dataset_name'])
+            performance_table['task'].append(task)
+            for k, v in metrics.items():
+                performance_table[k].append(v)
+    print(pd.DataFrame(performance_table))

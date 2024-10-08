@@ -75,7 +75,7 @@ medical_show = {
     'Weight': {'step': 1, 'range': [29, 108]},
     'SBP': {'step': 2, 'range': [40, 200]},
     'DBP': {'step': 2, 'range': [20, 136]},
- }
+}
 
 medical_standard = {
     "Cl": [96, 106],
@@ -91,10 +91,26 @@ medical_standard = {
     "Albumin": [40, 55],
     "hs-CRP": [0.5, 10],
     "Glucose": [3.9, 6.1],
-    "Appetite": [],
-    "Weight": [],
     "SBP": [100, 120],
     "DBP": [60, 80],
+}
+
+medical_standard_for_esrd = {
+    "Cl": "higher than 96 mmol/L",
+    "CO2CP": "higher than 25 mmol/L",
+    "Hb": "higher than 114 g/L",
+    "Urea": "higher than 20 mmol/L",
+    "Ca": "higher than 2.5 mmol/L",
+    "K": "higher than 4 mmol/L",
+    "Na": "higher than 135.5 mmol/L",
+    "Scr": "higher than 900 μmol/L",
+    "P": "higher than 1.5 mmol/L",
+    "Albumin": "higher than 32 g/L",
+    "hs-CRP": "lower than 16 mg/L",
+    "Glucose": "lower than 6 mmol/L",
+    "Weight": "higher than 59 kg",
+    "SBP": "higher than 130 mmHg",
+    "DBP": "higher than 70 mmHg",
 }
 
 medical_keys = [

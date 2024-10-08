@@ -1,5 +1,7 @@
 # New
 ehr_datasets/
+pyehr/ehrdatasets/
+graphrag/
 logs/
 response/
 corpus/
@@ -15,6 +17,9 @@ Warpformer/
 hparams.py
 perf.py
 config.py
+baseline_results/
+baseline_results_tmp/
+baseline_results_old/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
