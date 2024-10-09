@@ -1,4 +1,5 @@
 # New
+baseline_results/
 ehr_datasets/
 pyehr/ehrdatasets/
 graphrag/
