@@ -94,26 +94,26 @@ class DlPipeline(L.LightningModule):
         loss, y, y_hat, _ = self._get_loss(x, y, lens)
         self.log("train_loss", loss)
         return loss
-    def validation_step(self, batch, batch_idx):
-        x, y, lens, pid = batch
-        loss, y, y_hat, _ = self._get_loss(x, y, lens)
-        self.log("val_loss", loss)
-        outs = {'y_pred': y_hat, 'y_true': y, 'val_loss': loss}
-        self.validation_step_outputs.append(outs)
-        return loss
-    def on_validation_epoch_end(self):
-        y_pred = torch.cat([x['y_pred'] for x in self.validation_step_outputs]).detach().cpu()
-        y_true = torch.cat([x['y_true'] for x in self.validation_step_outputs]).detach().cpu()
-        loss = torch.stack([x['val_loss'] for x in self.validation_step_outputs]).mean().detach().cpu()
-        self.log("val_loss_epoch", loss)
-        metrics = get_all_metrics(y_pred, y_true, self.task, self.los_info)
-        for k, v in metrics.items(): self.log(k, v)
-        main_score = metrics[self.main_metric]
-        if check_metric_is_better(self.cur_best_performance, self.main_metric, main_score, self.task):
-            self.cur_best_performance = metrics
-            for k, v in metrics.items(): self.log("best_"+k, v)
-        self.validation_step_outputs.clear()
-        return main_score
+    # def validation_step(self, batch, batch_idx):
+    #     x, y, lens, pid = batch
+    #     loss, y, y_hat, _ = self._get_loss(x, y, lens)
+    #     self.log("val_loss", loss)
+    #     outs = {'y_pred': y_hat, 'y_true': y, 'val_loss': loss}
+    #     self.validation_step_outputs.append(outs)
+    #     return loss
+    # def on_validation_epoch_end(self):
+    #     y_pred = torch.cat([x['y_pred'] for x in self.validation_step_outputs]).detach().cpu()
+    #     y_true = torch.cat([x['y_true'] for x in self.validation_step_outputs]).detach().cpu()
+    #     loss = torch.stack([x['val_loss'] for x in self.validation_step_outputs]).mean().detach().cpu()
+    #     self.log("val_loss_epoch", loss)
+    #     metrics = get_all_metrics(y_pred, y_true, self.task, self.los_info)
+    #     for k, v in metrics.items(): self.log(k, v)
+    #     main_score = metrics[self.main_metric]
+    #     if check_metric_is_better(self.cur_best_performance, self.main_metric, main_score, self.task):
+    #         self.cur_best_performance = metrics
+    #         for k, v in metrics.items(): self.log("best_"+k, v)
+    #     self.validation_step_outputs.clear()
+    #     return main_score
 
     def test_step(self, batch, batch_idx):
         x, y, lens, pid = batch
