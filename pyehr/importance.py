@@ -12,7 +12,7 @@ from configs.hparams import hparams
 
 shap.initjs()
 torch.set_grad_enabled(True)
-BATCH_SIZE = 1024
+BATCH_SIZE = 2048
 
 def get_background_and_shap_variables(config):
     dm = EhrDataModule(f'ehrdatasets/{config["dataset"]}/processed/fold_{config["fold"]}', batch_size=BATCH_SIZE)
@@ -64,43 +64,45 @@ if __name__ == "__main__":
     best_hparams = hparams
     for i in range(len(best_hparams)):
         config = best_hparams[i]
-        folds = [1]
-        seeds = [0]
-        for fold in folds:
-            config["fold"] = fold
-            save_dir = f"ehrdatasets/{config['dataset']}/processed/fold_{config['fold']}"
-            os.makedirs(save_dir, exist_ok=True)
-            for seed in seeds:
-                config["seed"] = seed
-                print(config)
-                x_bg, x_shap = get_background_and_shap_variables(config)
-                shap_values = get_feature_importance(config, x_bg, x_shap)
-                pd.to_pickle(shap_values, f"{save_dir}/{config['model']}_seed{config['seed']}_shap.pkl")
-                # shap_values = pd.read_pickle(f"{save_dir}/{config['model']}_seed{config['seed']}_shap.pkl")
+        config["fold"] = 1
+        config["seed"] = 0
+        save_dir = f"ehrdatasets/{config['dataset']}/processed/fold_1/"
+        os.makedirs(os.path.join(save_dir, 'dl_data'), exist_ok=True)
 
+        for mode in ['val', 'test']:
+            config["mode"] = mode
+            print(config)
+            x_bg, x_shap = get_background_and_shap_variables(config)
+            shap_values = get_feature_importance(config, x_bg, x_shap)
+            pd.to_pickle(shap_values, f"{save_dir}/dl_data/{config['model']}_{mode}_shap.pkl")
+            # shap_values = pd.read_pickle(f"{save_dir}/{config['model']}_{mode}_shap.pkl")
+
+            if config["dataset"] in ['mimic-iv', 'mimic-iii']:
+                feature_names_url = f'{save_dir}/numerical_features.pkl'
+            else:
                 feature_names_url = f'{save_dir}/labtest_features.pkl'
-                test_raw_x_url = f'{save_dir}/train_raw_x.pkl'
-                feature_names = pd.read_pickle(feature_names_url)
-                test_raw_x = pd.read_pickle(test_raw_x_url)
+            test_raw_x_url = f'{save_dir}/{mode}_raw_x.pkl'
+            feature_names = pd.read_pickle(feature_names_url)
+            test_raw_x = pd.read_pickle(test_raw_x_url)
 
-                if config["dataset"] in ['mimic-iv', 'mimic-iii']:
-                    features = shap_values[:, config["demo_dim"] + 47:]
-                    test_raw_x = np.array([x[-1] for x in test_raw_x])[:, config["demo_dim"] + 47:]
-                else:
-                    features = shap_values[:, config["demo_dim"]:]
-                    test_raw_x = np.array([x[-1] for x in test_raw_x])[:, config["demo_dim"]:]
-                print(features.shape, len(feature_names), test_raw_x.shape)
+            if config["dataset"] in ['mimic-iv', 'mimic-iii']:
+                features = shap_values[:, config["demo_dim"] + 47:]
+                test_raw_x = np.array([x[-1] for x in test_raw_x])[:, config["demo_dim"] + 47:]
+            else:
+                features = shap_values[:, config["demo_dim"]:]
+                test_raw_x = np.array([x[-1] for x in test_raw_x])[:, config["demo_dim"]:]
+            print(features.shape, len(feature_names), test_raw_x.shape)
 
-                all_features = []
-                for feature_weight_item, raw_item in zip(features, test_raw_x):
-                    last_feat_dict = {key: {'value': value, 'attention': attn} for key, value, attn in zip(feature_names, raw_item, feature_weight_item)}
-                    last_feat_dict_sort = dict(sorted(last_feat_dict.items(), key=lambda x: abs(x[1]['attention']), reverse=True))
-                    selected_features = [item for item in last_feat_dict_sort.items() if abs(item[1]['attention']) > 0.005][:3]
-                    all_features.append(selected_features)
-                pd.to_pickle(all_features, f'{save_dir}/{config["model"]}_seed{config["seed"]}_features.pkl')
-                
-                outs = pd.read_pickle(f"logs/test/{config['dataset']}/{config['model']}/fold_{fold}-seed_{config['seed']}/outs.pkl")
-                preds = outs['preds'].tolist()
-                pd.to_pickle(preds, f"{save_dir}/{config['model']}_seed{config['seed']}_output.pkl")
-                embeddings = outs['embeddings']
-                pd.to_pickle(embeddings, f"{save_dir}/{config['model']}_seed{config['seed']}_embeddings.pkl")
+            all_features = []
+            for feature_weight_item, raw_item in zip(features, test_raw_x):
+                last_feat_dict = {key: {'value': value, 'attention': attn} for key, value, attn in zip(feature_names, raw_item, feature_weight_item)}
+                last_feat_dict_sort = dict(sorted(last_feat_dict.items(), key=lambda x: abs(x[1]['attention']), reverse=True))
+                selected_features = [item for item in last_feat_dict_sort.items() if abs(item[1]['attention']) > 0.005][:3]
+                all_features.append(selected_features)
+            pd.to_pickle(all_features, f'{save_dir}/dl_data/{config["model"]}_{mode}_features.pkl')
+            
+            outs = pd.read_pickle(f"logs/test/{config['dataset']}/{config['model']}/fold_1-seed_0/{mode}_outs.pkl")
+            preds = outs['preds'].tolist()
+            pd.to_pickle(preds, f"{save_dir}/dl_data/{config['model']}_{mode}_output.pkl")
+            embeddings = outs['embeddings']
+            pd.to_pickle(embeddings, f"{save_dir}/dl_data/{config['model']}_{mode}_embeddings.pkl")
