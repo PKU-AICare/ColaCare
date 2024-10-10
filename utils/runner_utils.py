@@ -3,26 +3,19 @@ import pandas as pd
 
 def load_data(config):
     data_url = config['ehr_dataset_dir']
-    train_pids = pd.read_pickle(f'{data_url}/train_pid.pkl')
-    val_pids = pd.read_pickle(f'{data_url}/val_pid.pkl')
     if config["mode"] == "test":
         test_pids = pd.read_pickle(f'{data_url}/test_pid.pkl')
+        test_y = pd.read_pickle(f'{data_url}/test_y.pkl')
     else:
         test_pids = pd.read_pickle(f'{data_url}/val_pid.pkl')
-
-    train_y = pd.read_pickle(f'{data_url}/train_y.pkl')
-    test_y = pd.read_pickle(f'{data_url}/test_y.pkl')
-    val_y = pd.read_pickle(f'{data_url}/val_y.pkl')
+        test_y = pd.read_pickle(f'{data_url}/val_y.pkl')
     
-    return train_pids,test_pids,val_pids,train_y,test_y,val_y
+    return test_pids, test_y
 
 
 def load_preds(config):
     data_url = config['ehr_dataset_dir']
-    if config["mode"] == "test":
-        doctors = [pd.read_pickle(f'{data_url}/{config["ehr_model_names"][i]}_seed{config["seeds"][i]}_output.pkl') for i in range(config["doctor_num"])]
-    else:
-        doctors = [pd.read_pickle(f'{data_url}/{config["ehr_model_names"][i]}_seed{config["seeds"][i]}_output2.pkl') for i in range(config["doctor_num"])]
+    doctors = [pd.read_pickle(f'{data_url}/dl_data/{config["ehr_model_names"][i]}_{config["mode"]}_output.pkl') for i in range(config["doctor_num"])]
     return doctors
 
 
