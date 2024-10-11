@@ -119,10 +119,6 @@ class DlPipeline(L.LightningModule):
         x, y, lens, pid = batch
         loss, y, y_hat, embedding = self._get_loss(x, y, lens)
         outs = {'y_pred': y_hat, 'y_true': y, 'lens': lens, 'pids': pid, 'embeddings': embedding}
-        if self.model_name == 'ConCare':
-            feature_weight_unpad = nn.utils.rnn.unpad_sequence(self.feature_weight, batch_first=True, lengths=lens.cpu())
-            feature_weight = torch.vstack([f[-1] for f in feature_weight_unpad]).squeeze(dim=-1)
-            outs.update({'feature_weight': feature_weight})
         self.test_step_outputs.append(outs)
         return loss
     def on_test_epoch_end(self):
@@ -134,18 +130,19 @@ class DlPipeline(L.LightningModule):
         pids.extend([x['pids'] for x in self.test_step_outputs])
         self.test_performance = get_all_metrics(y_pred, y_true, self.task, self.los_info)
         self.test_outputs = {'preds': y_pred.numpy(), 'labels': y_true.numpy(), 'lens': lens.numpy(), 'pids': pids, 'embeddings': embeddings.numpy()}
-        if self.model_name == 'ConCare':
-            feature_weight = torch.cat([x['feature_weight'] for x in self.test_step_outputs]).detach().cpu().numpy()
-            self.test_outputs.update({'feature_weight': feature_weight})
         self.test_step_outputs.clear()
         return self.test_performance
 
     def predict(self, x):
         xx = torch.tensor(x).unsqueeze(1).to(dtype=torch.float32, device="cuda:1")
+        batch_size = xx.shape[0]
+        if self.model_name == "ConCare" and batch_size == 1:
+            xx = xx.repeat(2, 1, 1)
         lens = torch.ones(xx.shape[0]).to(xx.device)
         y_hat = self(xx, lens)[0]
-        y_hat = y_hat.detach().cpu().numpy()
-        return y_hat
+        if self.model_name == "ConCare" and batch_size == 1:
+            y_hat = y_hat[0].unsqueeze(0)
+        return y_hat.detach().cpu().numpy()
 
     def configure_optimizers(self):
         optimizer = torch.optim.AdamW(self.parameters(), lr=self.learning_rate)
