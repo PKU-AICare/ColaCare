@@ -11,6 +11,7 @@ output/
 output_bk/
 lm/
 cost/
+baseline_results_old/
 PrimeNet/
 Warpformer/
 *.ipynb
