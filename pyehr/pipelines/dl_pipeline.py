@@ -81,12 +81,12 @@ class DlPipeline(L.LightningModule):
     def _get_loss(self, x, y, lens):
         if self.model_name == "ConCare":
             y_hat, embedding, decov_loss = self(x, lens)
-            y_hat, y = unpad_y(y_hat, y, lens)
+            y_hat, y = unpad_y(y_hat, y, lens, self.task)
             loss = get_loss(y_hat, y, self.task, self.time_aware)
             loss += 10*decov_loss
         else:
             y_hat, embedding = self(x, lens)
-            y_hat, y = unpad_y(y_hat, y, lens)
+            y_hat, y = unpad_y(y_hat, y, lens, self.task)
             loss = get_loss(y_hat, y, self.task, self.time_aware)
         return loss, y, y_hat, embedding
     def training_step(self, batch, batch_idx):
