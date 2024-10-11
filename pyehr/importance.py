@@ -101,7 +101,7 @@ if __name__ == "__main__":
                 all_features.append(selected_features)
             pd.to_pickle(all_features, f'{save_dir}/dl_data/{config["model"]}_{mode}_features.pkl')
             
-            outs = pd.read_pickle(f"logs/test/{config['dataset']}/{config['model']}/fold_1-seed_0/{mode}_outs.pkl")
+            outs = pd.read_pickle(f"logs/test/{config['dataset']}/{config['task']}/{config['model']}/fold_1-seed_0/{mode}_outs.pkl")
             preds = outs['preds'].tolist()
             pd.to_pickle(preds, f"{save_dir}/dl_data/{config['model']}_{mode}_output.pkl")
             embeddings = outs['embeddings']
