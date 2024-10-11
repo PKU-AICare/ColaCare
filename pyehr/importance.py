@@ -15,7 +15,7 @@ torch.set_grad_enabled(True)
 BATCH_SIZE = 2048
 
 def get_background_and_shap_variables(config):
-    dm = EhrDataModule(f'ehrdatasets/{config["dataset"]}/processed/fold_{config["fold"]}', batch_size=BATCH_SIZE)
+    dm = EhrDataModule(f'ehrdatasets/{config["dataset"]}/processed/fold_{config["fold"]}', batch_size=BATCH_SIZE, test_mode=config["mode"])
     x_bg, y_bg, lens_bg, pid_bg = (next(iter(dm.train_dataloader())))
     # only use the last visit to calculate the feature importance, and the shape is (batch_size, input_dim)
     x_bg = x_bg[:, -1, :].detach().cpu().numpy()
