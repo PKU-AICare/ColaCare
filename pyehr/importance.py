@@ -74,7 +74,7 @@ if __name__ == "__main__":
             print(config)
             x_bg, x_shap = get_background_and_shap_variables(config)
             shap_values = get_feature_importance(config, x_bg, x_shap)
-            pd.to_pickle(shap_values, f"{save_dir}/dl_data/{config['model']}_{mode}_shap.pkl")
+            pd.to_pickle(shap_values, f"{save_dir}/dl_data/{config['model']}_{config['task']}_{mode}_shap.pkl")
             # shap_values = pd.read_pickle(f"{save_dir}/{config['model']}_{mode}_shap.pkl")
 
             if config["dataset"] in ['mimic-iv', 'mimic-iii']:
@@ -99,10 +99,10 @@ if __name__ == "__main__":
                 last_feat_dict_sort = dict(sorted(last_feat_dict.items(), key=lambda x: abs(x[1]['attention']), reverse=True))
                 selected_features = [item for item in last_feat_dict_sort.items() if abs(item[1]['attention']) > 0.005][:3]
                 all_features.append(selected_features)
-            pd.to_pickle(all_features, f'{save_dir}/dl_data/{config["model"]}_{mode}_features.pkl')
+            pd.to_pickle(all_features, f"{save_dir}/dl_data/{config['model']}_{config['task']}_{mode}_features.pkl")
             
             outs = pd.read_pickle(f"logs/test/{config['dataset']}/{config['task']}/{config['model']}/fold_1-seed_0/{mode}_outs.pkl")
             preds = outs['preds'].tolist()
-            pd.to_pickle(preds, f"{save_dir}/dl_data/{config['model']}_{mode}_output.pkl")
+            pd.to_pickle(preds, f"{save_dir}/dl_data/{config['model']}_{config['task']}_{mode}_output.pkl")
             embeddings = outs['embeddings']
-            pd.to_pickle(embeddings, f"{save_dir}/dl_data/{config['model']}_{mode}_embeddings.pkl")
+            pd.to_pickle(embeddings, f"{save_dir}/dl_data/{config['model']}_{config['task']}_{mode}_embeddings.pkl")
