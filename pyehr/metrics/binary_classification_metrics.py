@@ -7,13 +7,12 @@ import numpy as np
 threshold = 0.5
 
 def minpse(preds, labels):
-    precisions, recalls, thresholds = sklearn_metrics.precision_recall_curve(labels, preds)
+    precisions, recalls, _ = sklearn_metrics.precision_recall_curve(labels, preds)
     minpse_score = np.max([min(x, y) for (x, y) in zip(precisions, recalls)])
     return minpse_score
 
 
 def get_binary_metrics(preds, labels):
-
     accuracy = Accuracy(task="binary", threshold=threshold)
     auroc = AUROC(task="binary")
     auprc = AveragePrecision(task="binary")

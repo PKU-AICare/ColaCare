@@ -14,7 +14,7 @@ class TimeAwareLoss(nn.Module):
         loss_unreduced = self.bce(outcome_pred, outcome_true)
 
         reward_term = (los_true * torch.abs(outcome_true - outcome_pred)).mean()  # Reward term
-        loss = (loss_unreduced * los_weights).mean()-self.reward_factor * reward_term  # Weighted loss
+        loss = (loss_unreduced * los_weights).mean() - self.reward_factor * reward_term  # Weighted loss
         
         return torch.clamp(loss, min=0)
 

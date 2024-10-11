@@ -20,11 +20,11 @@ def get_all_metrics(preds, labels, task, los_info):
     if isinstance(labels, torch.Tensor) == False:
         labels = torch.tensor(labels)
 
-    if task == "outcome":
+    if task in ["outcome", "readmission"]:
         return get_binary_metrics(preds, labels[:, 0]) if len(labels.shape) > 1 else get_binary_metrics(preds, labels)
     elif task == "los":
         y_pred_los = reverse_los(preds, los_info)
-        y_true_los = reverse_los(labels[:,1], los_info)
+        y_true_los = reverse_los(labels[:, 1], los_info)
         return get_regression_metrics(y_pred_los, y_true_los)
     # elif task == "multitask":
     #     if not isinstance(threshold, list):
@@ -41,4 +41,4 @@ def get_all_metrics(preds, labels, task, los_info):
     #             es_list.append(es_score(labels[:,0], y_true_los, preds[:,0], thr)['es'])
     #         return {"osmae_list": osmae_list, "es_list": es_list}
     else:
-        raise ValueError("Task not supported")
+        raise ValueError(f"Task not supported: {task}!")
