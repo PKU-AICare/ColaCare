@@ -4,6 +4,7 @@ import pandas as pd
 import lightning as L
 from lightning.pytorch.callbacks import EarlyStopping, ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger
+import matplotlib.pyplot as plt
 
 from configs.hparams import hparams
 from ehrdatasets.loader.datamodule import EhrDataModule
@@ -95,6 +96,17 @@ def test_dl(config):
     return perf, outs
 
 
+def plot_distribution(data, save_dir, hidden_dim):
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.hist(data, bins='auto', edgecolor='black')
+    ax.set_title('Distribution of Data', fontsize=16)
+    ax.set_xlabel('Value', fontsize=12)
+    ax.set_ylabel('Frequency', fontsize=12)
+    ax.grid(True, linestyle='--', alpha=0.7)
+    # 保存图片
+    plt.savefig(f'{save_dir}/{hidden_dim}_dis.png')
+
+
 if __name__ == "__main__":
     best_hparams = hparams # [TO-SPECIFY]
     all_df = pd.DataFrame()
@@ -110,12 +122,12 @@ if __name__ == "__main__":
         for mode in ["val", "test"]:
             config["mode"] = mode
             perf, outs = test_dl(config)
-            # print(perf)
-            # metrics = run_bootstrap(outs['preds'], outs['labels'])
-            # metrics = {k: f"{v['mean']*100:.2f} ± {v['std']*100:.2f}" for k, v in metrics.items()}
-            # metrics_df = pd.DataFrame({'model': config["model"], **metrics}, index=[i])
-            # print(metrics_df)
+            print(perf)
+            metrics = run_bootstrap(outs['preds'], outs['labels'])
+            metrics = {k: f"{v['mean']*100:.2f} ± {v['std']*100:.2f}" for k, v in metrics.items()}
+            metrics_df = pd.DataFrame({'model': config["model"], 'mode': config["mode"], 'hidden_dim': config["hidden_dim"], **metrics}, index=[i])
+            print(metrics_df)
             pd.to_pickle(perf, f'{save_dir}/{mode}_perf.pkl')
             pd.to_pickle(outs, f'{save_dir}/{mode}_outs.pkl')
-            # all_df = pd.concat([all_df, metrics_df], axis=0)
-    # all_df.to_csv(f'{config["dataset"]}_metrics2.csv', index=False)
+            all_df = pd.concat([all_df, metrics_df], axis=0)
+    all_df.to_csv(f'{config["dataset"]}_metrics.csv', index=False)
