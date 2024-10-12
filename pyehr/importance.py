@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
             all_features = []
             for feature_weight_item, raw_item in zip(features, test_raw_x):
-                last_feat_dict = {key: {'value': abs(value), 'attention': attn} for key, value, attn in zip(feature_names, raw_item, feature_weight_item)}
+                last_feat_dict = {key: {'value': value, 'attention': abs(attn)} for key, value, attn in zip(feature_names, raw_item, feature_weight_item)}
                 last_feat_dict_sort = dict(sorted(last_feat_dict.items(), key=lambda x: abs(x[1]['attention']), reverse=True))
                 selected_features = [item for item in last_feat_dict_sort.items()][:3]
                 all_features.append(selected_features)
