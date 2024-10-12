@@ -85,6 +85,9 @@ if __name__ == "__main__":
             feature_names = pd.read_pickle(feature_names_url)
             test_raw_x = pd.read_pickle(test_raw_x_url)
 
+            # outs = pd.read_pickle(f"logs/test/{config['dataset']}/{config['task']}/{config['model']}/fold_1-seed_0/{mode}_outs.pkl")
+            # shap_values = outs['feature_weight']
+
             if config["dataset"] in ['mimic-iv', 'mimic-iii']:
                 features = shap_values[:, config["demo_dim"] + 47:]
                 test_raw_x = np.array([x[-1] for x in test_raw_x])[:, config["demo_dim"] + 47:]
@@ -95,9 +98,9 @@ if __name__ == "__main__":
 
             all_features = []
             for feature_weight_item, raw_item in zip(features, test_raw_x):
-                last_feat_dict = {key: {'value': value, 'attention': attn} for key, value, attn in zip(feature_names, raw_item, feature_weight_item)}
+                last_feat_dict = {key: {'value': abs(value), 'attention': attn} for key, value, attn in zip(feature_names, raw_item, feature_weight_item)}
                 last_feat_dict_sort = dict(sorted(last_feat_dict.items(), key=lambda x: abs(x[1]['attention']), reverse=True))
-                selected_features = [item for item in last_feat_dict_sort.items() if abs(item[1]['attention']) > 0.005][:3]
+                selected_features = [item for item in last_feat_dict_sort.items()][:3]
                 all_features.append(selected_features)
             pd.to_pickle(all_features, f"{save_dir}/dl_data/{config['model']}_{config['task']}_{mode}_features.pkl")
             
