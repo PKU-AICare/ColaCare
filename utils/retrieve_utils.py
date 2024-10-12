@@ -156,7 +156,7 @@ class RetrievalSystem:
         self.corpus_names = corpus_names[corpus_name]
         self.retrievers = [Retriever(self.retriever_name, self.retriever_path, corpus_name, corpus_dir) for corpus_name in self.corpus_names]
     
-    def retrieve(self, question, k=16) -> Tuple[List[Dict[str, str]], List[np.ndarray], List[float]]:
+    def retrieve(self, question, k=3) -> Tuple[List[Dict[str, str]], List[np.ndarray], List[float]]:
         '''
             Given questions, return the relevant snippets from the corpus
         '''
