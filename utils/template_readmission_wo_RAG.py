@@ -2,21 +2,17 @@ from liquid import Template
 
 
 ## Phase 1
-doctor_review_system = """You are an experienced doctor with extensive medical knowledge. I will provide you with multivariate time-series electronic health record for a patient, which is a structured collection of patient information comprising multiple clinical variables measured at various time points across multiple patient visits, represented as sequences of numerical values for each feature. I will also provide some AI model analyses for this patient, including the 30-day readmission prediction results and feature importance weights. The 30-day readmission prediction result refers to the likelihood of readmission after 30 days since discharge. The greater the feature importance weight, the greater the impact of that feature on the patient's readmission likelihood. When the patient's likelihood of readmission is low, this impact is positive; conversely, when the likelihood is high, the impact is negative. I will also retrieve relevant medical knowledge based on the AI model's analysis results and provide it to you. Please summarize the patient's condition based on multivariate time-series electronic health record, readmission likelihood and especially feature importance weights, and generate an analytical review."""
+doctor_review_system = """You are an experienced doctor with extensive medical knowledge. I will provide you with multivariate time-series electronic health record for a patient, which is a structured collection of patient information comprising multiple clinical variables measured at various time points across multiple patient visits, represented as sequences of numerical values for each feature. I will also provide some AI model analyses for this patient, including the 30-day readmission prediction results and feature importance weights. The 30-day readmission prediction result refers to the likelihood of readmission after 30 days since discharge. The greater the feature importance weight, the greater the impact of that feature on the patient's readmission likelihood. When the patient's likelihood of readmission is low, this impact is positive; conversely, when the likelihood is high, the impact is negative. Please summarize the patient's condition based on multivariate time-series electronic health record, readmission likelihood and especially feature importance weights, and generate an analytical review."""
 
-doctor_review_user = Template("""Here is the relevant medical knowledge:
-{{context}}
-
-Here is the patient record, including the patient's basic information and analysis results of AI models:
+doctor_review_user = Template("""Here is the patient record, including the patient's basic information and analysis results of AI models:
 {{hcontext}}
 
 You need to analyze the patient's condition based on the information above and generate an analytical review. Please output the following content in JSON format:
 1. The patient's 30-day readmission likelihood from the AI model, just respond with a two-decimal number.
 2. Your analysis of the patient's condition. Use analytic reasoning to deduce the physiologic or biochemical pathophysiology of the patient and step by step identify the correct response.
-3. Choose reasonable evidence from the medical knowledge I provide to support your analysis.
 
 Here is an example of the format you should output:
-{"logit": "0.73", "analysis": "Your analysis of the patient's condition regarding readmission likelihood.", "evidences": ["Evidence 1 ...", "Evidence 2 ..."]}
+{"logit": "0.73", "analysis": "Your analysis of the patient's condition regarding readmission likelihood."}
 
 Respond in JSON format without any additional content:
 """)
@@ -36,7 +32,7 @@ You need to read all doctors' opinions carefully and analyze whether their opini
 Next, please write a synthesized report including the following:
 1. A direct statement: in your opinion, whether the patient's risk of 30-day readmission is high or not.
 2. A summary of the patient's condition and the characteristics of the patient that you think are worthy of attention. Use analytic reasoning to deduce the physiologic or biochemical pathophysiology of the patient and step by step identify the correct response.
-3. List of supporting evidence. Please output detailed content from some of the evidence provided by the doctors or some analysis results of the doctors. Do not just list the doctor's name.
+3. List of supporting evidence. Please output detailed content from some analysis results of the doctors. Do not just list the doctor's name.
 
 Here are two examples of the format you should output:
 {"answer":"In my opinion, the patient has a high likelihood of 30-day readmission.", "report": "...", "evidences": ["...", "..."]}.
@@ -45,12 +41,10 @@ Here are two examples of the format you should output:
 Respond in JSON format without any additional content:
 """)
 
+## Phase 3
 doctor_collaboration_system = """You are an experienced medical expert participating in a consultation with several other medical doctors for a patient. The meta doctor of this consultation has generated a synthesized report based on all doctors' analysis of the patient. Please provide your viewpoint on his opinion regarding the patient's 30-day readmission likelihood."""
 
-doctor_collaboration_user = Template("""Here is the relevant medical knowledge:
-{{context}}
-
-Here is your initial analysis of the patient, which is not completely reasonable, and you may need to adjust it based on the meta doctor's opinion:
+doctor_collaboration_user = Template("""Here is your initial analysis of the patient, which is not completely reasonable, and you may need to adjust it based on the meta doctor's opinion:
 {{analysis}}
 
 Here is the opinion of the meta doctor:
@@ -66,12 +60,11 @@ You need to consider the meta doctor's opinion carefully and provide your 3 best
     2 for Moderate - You have a good understanding of the subject area and are familiar with the medical domain. You feel confident in your ability to accurately assess the quality and significance of the work. Your evaluation is based on a solid grasp of the content and context.
     1 for Low - You have some knowledge of the subject area and are somewhat familiar with the medical domain. You understand the main points but may lack depth in certain areas. You are reasonably confident in your assessment but acknowledge some limitations in your expertise.
 3. The reason for your opinion. Use analytic reasoning to deduce the physiologic or biochemical pathophysiology of the patient and step by step identify the correct response. If you change your opinion, for example, you agree with the meta doctor's opinion which is different from your initial analysis, please provide detailed reason for the change.
-4. The evidence you use to support your opinion. Please choose from the relevant medical knowledge I provide as your evidence.
 
 Here is an example of the format you should output:
 [
-    {"answer": "agree", "confidence": 3, "reason": "The reason for your opinion.", "evidences": ["Evidence 1 ...", "Evidence 2 ..."]},
-    {"answer": "disagree", "confidence": 1, "reason": "The reason for your opinion.", "evidences": ["Evidence 1 ...", "Evidence 2 ..."]}  
+    {"answer": "agree", "confidence": 3, "reason": "The reason for your opinion."},
+    {"answer": "disagree", "confidence": 1, "reason": "The reason for your opinion."}  
 ]
 
 Respond in JSON format without any additional content:
@@ -114,7 +107,7 @@ The following are their opinions:
 
 Now, you need to judge whether the next round of discussion is needed based on each doctor's statement. Considering the following four cases:
 1. If all doctors agree with the previous synthesized report, there is no need to continue the discussion.
-2. If some doctors disagree with the previous report, but they are not confident in their judgment and have not listed convincing evidence, there is no need to continue the discussion.
+2. If some doctors disagree with the previous report, but they are not confident in their judgment, there is no need to continue the discussion.
 3. If some doctors strongly oppose the previous report and you think their evidence is worth discussing, please continue the discussion.
 4. If most doctors disagree with the previous report, please continue the discussion.
 
