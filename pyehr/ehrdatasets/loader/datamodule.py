@@ -27,7 +27,7 @@ class EhrDataModule(L.LightningDataModule):
         self.batch_size = batch_size
 
         self.train_dataset = EhrDataset(self.data_path, mode="train")
-        # self.val_dataset = EhrDataset(self.data_path, mode='val')
+        self.val_dataset = EhrDataset(self.data_path, mode='val')
         self.test_dataset = EhrDataset(self.data_path, mode=test_mode)
 
     # def setup(self, stage: str):
@@ -40,8 +40,8 @@ class EhrDataModule(L.LightningDataModule):
     def train_dataloader(self):
         return data.DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True , collate_fn=self.pad_collate, num_workers=8)
 
-    # def val_dataloader(self):
-    #     return data.DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False , collate_fn=self.pad_collate, num_workers=8)
+    def val_dataloader(self):
+        return data.DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False , collate_fn=self.pad_collate, num_workers=8)
 
     def test_dataloader(self):
         return data.DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False , collate_fn=self.pad_collate, num_workers=8)
