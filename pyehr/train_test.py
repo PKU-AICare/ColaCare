@@ -69,14 +69,18 @@ def train_dl(config):
     logger = CSVLogger(save_dir="logs", name=f'train/{config["dataset"]}/{config["task"]}', version=checkpoint_filename)
 
     # EarlyStop and checkpoint callback
-    if config["task"] in ["outcome", "readmission"]:
-        checkpoint_callback = ModelCheckpoint(every_n_epochs=50, filename="best")
+    if config["task"] in ["outcome", "readmission", "multitask"]:
+        early_stopping_callback = EarlyStopping(monitor="auprc", patience=config["patience"], mode="max",)
+        checkpoint_callback = ModelCheckpoint(filename="best", monitor="auprc", mode="max")
+    elif config["task"] == "los":
+        early_stopping_callback = EarlyStopping(monitor="mae", patience=config["patience"], mode="min",)
+        checkpoint_callback = ModelCheckpoint(filename="best", monitor="mae", mode="min")
     else:
         raise ValueError(f"Invalid task: {config['task']}")
     L.seed_everything(config["seed"]) # seed for reproducibility
 
     # train
-    trainer = L.Trainer(accelerator="gpu", devices=[1], max_epochs=config["epochs"], logger=logger, num_sanity_val_steps=0, callbacks=[checkpoint_callback])
+    trainer = L.Trainer(accelerator="gpu", devices=[1], max_epochs=config["epochs"], logger=logger, num_sanity_val_steps=0, callbacks=[checkpoint_callback, early_stopping_callback])
     pipeline = DlPipeline(config)
     trainer.fit(pipeline, dm)
 
@@ -115,7 +119,7 @@ if __name__ == "__main__":
         config["fold"] = 1
         config["seed"] = 0
         best_metric = {}
-        save_dir = f'logs/test/{config["dataset"]}/{config["model"]}/fold_1-seed_0'
+        save_dir = f'logs/test/{config["dataset"]}/{config["task"]}/{config["model"]}/fold_1-seed_0'
         os.makedirs(save_dir, exist_ok=True)
         print(config)
         train_dl(config)
@@ -123,11 +127,12 @@ if __name__ == "__main__":
             config["mode"] = mode
             perf, outs = test_dl(config)
             print(perf)
+            # plot_distribution(outs['preds'], save_dir, config["hidden_dim"])
             metrics = run_bootstrap(outs['preds'], outs['labels'])
             metrics = {k: f"{v['mean']*100:.2f} ± {v['std']*100:.2f}" for k, v in metrics.items()}
-            metrics_df = pd.DataFrame({'model': config["model"], 'mode': config["mode"], 'hidden_dim': config["hidden_dim"], **metrics}, index=[i])
+            metrics_df = pd.DataFrame({'model': config["model"], 'mode': config["mode"], **metrics}, index=[i])
             print(metrics_df)
             pd.to_pickle(perf, f'{save_dir}/{mode}_perf.pkl')
             pd.to_pickle(outs, f'{save_dir}/{mode}_outs.pkl')
             all_df = pd.concat([all_df, metrics_df], axis=0)
-    all_df.to_csv(f'{config["dataset"]}_metrics.csv', index=False)
+        all_df.to_csv(f'{config["dataset"]}_{config["task"]}_metrics.csv', index=False)
