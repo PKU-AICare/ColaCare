@@ -22,13 +22,22 @@ def load_preds(config):
 def check_numbers(config, nums):
     dataset = config['ehr_dataset_name']
     mode = config['mode']
+    task = config['task']
     if dataset in ['mimic-iv', 'mimic-iii']:
-        if mode == 'test':
-            if max(nums) - min(nums) > 0.3 and any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
-                return True
-        elif mode == 'val':
-            if max(nums) - min(nums) > 0.3 and any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
-                return True
+        if task == 'outcome':
+            if mode == 'test':
+                if max(nums) - min(nums) > 0.3 and any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
+                    return True
+            elif mode == 'val':
+                if max(nums) - min(nums) > 0.3 and any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
+                    return True
+        elif task == 'readmission':
+            if mode == 'test':
+                if any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
+                    return True
+            elif mode == 'val':
+                if any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
+                    return True
     elif dataset == 'cdsl':
         if mode == 'test':
             if max(nums) - min(nums) > 0.6 and any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
