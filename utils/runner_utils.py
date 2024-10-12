@@ -22,7 +22,7 @@ def load_preds(config):
 def check_numbers(config, nums):
     dataset = config['ehr_dataset_name']
     mode = config['mode']
-    task = config['task']
+    task = config['ehr_task']
     if dataset in ['mimic-iv', 'mimic-iii']:
         if task == 'outcome':
             if mode == 'test':
