@@ -1,3 +1,4 @@
+import ipdb
 import lightning as L
 import torch
 import torch.nn as nn
@@ -127,8 +128,11 @@ class DlPipeline(L.LightningModule):
         loss, y, y_hat, embedding = self._get_loss(x, y, lens)
         outs = {'y_pred': y_hat, 'y_true': y, 'lens': lens, 'pids': pid, 'embeddings': embedding}
         if self.model_name in ['ConCare', 'AdaCare', 'RETAIN']:
-            feature_weight_unpad = nn.utils.rnn.unpad_sequence(self.feature_weight, batch_first=True, lengths=lens.cpu())
-            feature_weight = torch.vstack([f[-1] for f in feature_weight_unpad]).squeeze(dim=-1)
+            if self.model_name in ['AdaCare', 'RETAIN']:
+                feature_weight_unpad = nn.utils.rnn.unpad_sequence(self.feature_weight, batch_first=True, lengths=lens.cpu())
+                feature_weight = torch.vstack([f[-1] for f in feature_weight_unpad]).squeeze(dim=-1)
+            else:
+                feature_weight = self.feature_weight
             outs.update({'feature_weight': feature_weight})
         self.test_step_outputs.append(outs)
         return loss
