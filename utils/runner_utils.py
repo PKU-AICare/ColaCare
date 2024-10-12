@@ -15,7 +15,7 @@ def load_data(config):
 
 def load_preds(config):
     data_url = config['ehr_dataset_dir']
-    doctors = [pd.read_pickle(f'{data_url}/dl_data/{config["ehr_model_names"][i]}_{config["mode"]}_output.pkl') for i in range(config["doctor_num"])]
+    doctors = [pd.read_pickle(f'{data_url}/dl_data/{config["ehr_model_names"][i]}_{config["ehr_task"]}_{config["mode"]}_output.pkl') for i in range(config["doctor_num"])]
     return doctors
 
 
