@@ -95,7 +95,7 @@ class RETAINLayer(nn.Module):
         attn_beta = self.compute_beta(rx, lengths)
         c = attn_alpha * attn_beta * x  # (patient, sequence len, input_dim)
         c = torch.sum(c, dim=1)  # (patient, input_dim)
-        return c
+        return c, attn_beta
 
 class RETAIN(nn.Module):
     def __init__(self, input_dim: int, hidden_dim: int, dropout: float = 0.1, **kwargs):
@@ -116,6 +116,6 @@ class RETAIN(nn.Module):
         #     cur_out = self.proj(cur_out)
         #     out[:, cur_time, :] = cur_out
         # return out
-        out = self.retain_layer(x, mask)
+        out, feature_attn = self.retain_layer(x, mask)
         out = self.proj(out)
-        return out
+        return out, feature_attn
