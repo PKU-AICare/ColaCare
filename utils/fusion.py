@@ -1,3 +1,4 @@
+import ipdb
 import torch
 import torch.nn as nn
 
@@ -46,7 +47,7 @@ class TransformerEncoder(nn.Module):
     
     
 class Merger(nn.Module):
-    def __init__(self, ehr_embed_dim, ehr_num, text_emb_dim, hidden_dim, dropout=0.5):
+    def __init__(self, ehr_embed_dim, ehr_num, text_emb_dim, hidden_dim):
         super(Merger, self).__init__()
         self.layer = nn.Linear(ehr_embed_dim + text_emb_dim, hidden_dim)
         self.act = nn.GELU() 
@@ -54,7 +55,6 @@ class Merger(nn.Module):
     def forward(self, ehr_embs, text_emb):
         emb = torch.cat(ehr_embs + [text_emb], dim=1)
         emb = self.layer(emb)
-        emb = self.act(emb)
         return emb
 
 
