@@ -26,10 +26,10 @@ def check_numbers(config, nums):
     if dataset in ['mimic-iv', 'mimic-iii']:
         if task == 'outcome':
             if mode == 'test':
-                if max(nums) - min(nums) > 0.3 and any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
+                if any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
                     return True
             elif mode == 'val':
-                if max(nums) - min(nums) > 0.3 and any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
+                if any((nums[i] < 0.5 and nums[j] > 0.5) for i in range(len(nums)) for j in range(len(nums))):
                     return True
         elif task == 'readmission':
             if mode == 'test':
