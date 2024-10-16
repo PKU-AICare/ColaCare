@@ -1,5 +1,4 @@
 # New
-baseline_results/
 ehr_datasets/
 pyehr/ehrdatasets/
 graphrag/
@@ -11,7 +10,6 @@ output/
 output_bk/
 lm/
 cost/
-baseline_results_old/
 PrimeNet/
 Warpformer/
 *.ipynb
