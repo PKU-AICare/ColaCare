@@ -15,8 +15,6 @@ from utils.retrieve_utils import RetrievalSystem
 from utils.healthcare_context_utils import ContextBuilder
 from utils.config import deep_config, svip_config, vip_config
 from utils.prompt_template.template import *
-from utils.baselines import *
-# from graphrag.process_input_query import process_input
 
 
 class Agent:
