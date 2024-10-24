@@ -71,24 +71,31 @@ mimic_config = {
 - Run the following command to start the multi-agent collaboration framework.
 
 ```bash
-python pipeline.py
+python collaboration_pipeline.py
 ```
 
-> The results can be found in the `output` directory.
+> The results can be found in the `response` directory.
 
 ### Training Fusion Network 
 
 - Run the following command to train the fusion network.
 
 ```bash
-python process_output.py
+python utils/process_output.py
 python train_fusion.py
 ```
 
-## Datasets
+## Datasets and Tasks
+
+### Datasets
 
 ColaCare has been evaluated on the following datasets:
-- MIMIC-III
 - MIMIC-IV
 - CDSL (COVID-19 Data Saving Lives)
-- PD (Peritoneal Dialysis)
+- ESRD (End-Stage Renal Disease)
+
+### Tasks
+
+ColaCare has been evaluated on the following tasks:
+- In-hospital Mortality Prediction
+- 30-day Readmission Prediction
