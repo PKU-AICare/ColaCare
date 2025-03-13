@@ -4,7 +4,6 @@ from torchmetrics.classification import BinaryF1Score
 from sklearn import metrics as sklearn_metrics
 import numpy as np
 
-threshold = 0.5
 
 def minpse(preds, labels):
     precisions, recalls, _ = sklearn_metrics.precision_recall_curve(labels, preds)
@@ -13,6 +12,8 @@ def minpse(preds, labels):
 
 
 def get_binary_metrics(preds, labels):
+    threshold = 0.5
+    
     accuracy = Accuracy(task="binary", threshold=threshold)
     auroc = AUROC(task="binary")
     auprc = AveragePrecision(task="binary")

@@ -1,5 +1,5 @@
 import numpy as np
-from .binary_classification_metrics import get_binary_metrics
+from metrics import get_all_metrics
 
 
 def bootstrap(preds, labels, K=100, seed=42):
@@ -27,12 +27,16 @@ def bootstrap(preds, labels, K=100, seed=42):
     return bootstrapped_samples
 
 
-def export_metrics(bootstrapped_samples):
-    metrics = {"accuracy": [], "auprc": [], "auroc": [], "minpse": [], "f1": []}
+def export_metrics(bootstrapped_samples, config):
+    task = config["task"]
+    if task == "los":
+        metrics = {"mse": [], "rmse": [], "mae": [], "r2": []}
+    elif task in ["outcome", "readmission"]:
+        metrics = {"accuracy": [], "auprc": [], "auroc": [], "minpse": [], "f1": []}
     for sample in bootstrapped_samples:
         sample_preds, sample_labels = sample[0], sample[1]
-        res = get_binary_metrics(sample_preds, sample_labels)
-
+        
+        res = get_all_metrics(sample_preds, sample_labels, config["task"], config["los_info"])
         for k, v in res.items():
             metrics[k].append(v)
 
@@ -46,7 +50,7 @@ def export_metrics(bootstrapped_samples):
     return metrics
 
 
-def run_bootstrap(preds, labels, K=100, seed=42):
+def run_bootstrap(preds, labels, config, K=100, seed=42):
     bootstrap_samples = bootstrap(preds, labels, K=K, seed=seed)
-    metrics = export_metrics(bootstrap_samples)
+    metrics = export_metrics(bootstrap_samples, config)
     return metrics
