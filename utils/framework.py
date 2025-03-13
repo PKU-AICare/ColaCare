@@ -2,6 +2,7 @@ from typing import Literal, List, Dict
 import re
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor
 
 from openai import OpenAI
 from tenacity import (
@@ -13,7 +14,7 @@ from tenacity import (
 from utils.framework import *
 from utils.retrieve_utils import RetrievalSystem
 from utils.healthcare_context_utils import ContextBuilder
-from utils.config import deep_config, svip_config, vip_config
+from utils.config import deep_config, v1_config, v2_config, default_config
 from utils.prompt_template.template import *
 
 
@@ -27,16 +28,19 @@ class Agent:
         self.llm_name = llm_name
         if llm_name == "deepseek-chat":
             self.llm_config = deep_config
-        elif "gpt" in llm_name:
-            self.llm_config = svip_config
-        elif "qwen" in llm_name or "doubao" in llm_name:
-            self.llm_config = vip_config
-        self.client = OpenAI(api_key=self.llm_config["api_key"], base_url=self.llm_config["api_base"])
+        elif "gpt" in llm_name.lower():
+            self.llm_config = v1_config
+        elif "qwen" in llm_name.lower() or "doubao" in llm_name.lower() or "claude" in llm_name.lower():
+            self.llm_config = v2_config
+        elif "llama" in llm_name.lower():
+            self.llm_config = default_config
+        self.client = OpenAI(
+            api_key=self.llm_config["api_key"], base_url=self.llm_config["api_base"])
         self.conversation_history: List[Dict[str, str]] = []
 
     def add_message(self, role: str, content: str):
         self.conversation_history.append({"role": role, "content": content})
-        
+
     def clear_history(self):
         self.conversation_history.clear()
 
@@ -50,15 +54,14 @@ class DoctorAgent(Agent):
         role: str = "doctor",
     ) -> None:
         super().__init__(role, config["llm_name"])
-        
+
         self.dataset_name = config['ehr_dataset_name']
         self.ehr_task = config['ehr_task']
         self.ehr_model_name = config['ehr_model_names'][index]
         self.mode = config['mode']
-        
         self.retrieval_system = retrieval_system
         self.context_builder = ContextBuilder(dataset_name=self.dataset_name, task=self.ehr_task, model_name=self.ehr_model_name, mode=self.mode)
-    
+
     def analysis(self, patient_index: int, patient_id: int) -> tuple[Dict[str, str], str, int, int]:
         basic_context, subcontext, healthcare_context = self.context_builder.generate_context(patient_index, patient_id)
         context = self.retrieve(subcontext)
@@ -118,13 +121,13 @@ class DoctorAgent(Agent):
         print(f"DoctorAgent time cost: {end - start:.2f}s.")
         return ans, prompt_token, completion_token
 
-    def retrieve(self, question: str, k: int=3) -> str:
+    def retrieve(self, question: str, k: int = 3) -> str:
         retrieve_texts, _, _ = self.retrieval_system.retrieve(question, k=k)
         contexts = ["Document [{:d}] (Title: {:s}) {:s}".format(idx + 1, retrieve_texts[idx]["title"], retrieve_texts[idx]["content"]) for idx in range(len(retrieve_texts))]
         context = "\n".join(contexts)
         return context
-    
-    
+
+
 class LeaderAgent(Agent):
     def __init__(
         self,
@@ -187,15 +190,15 @@ class LeaderAgent(Agent):
         ]
         输出: 1 代表继续循环; 0 代表结束循环
         """
-        action_user_prompt=self.generate_doctors_prompt(doctor_responses)
-        messages=[
+        action_user_prompt = self.generate_doctors_prompt(doctor_responses)
+        messages = [
             {"role": "system", "content": action_system},
             {"role": "user", "content": action_user.render(opinions=action_user_prompt)}
         ]
         ans, prompt_token, completion_token = self.invoke(messages)
         action = self.extract_action_response(ans)
         return action, ans, messages, prompt_token, completion_token
-    
+
     def summary(self, doctor_responses, is_initial=False) -> tuple[Dict[str, str], str, int, int]:
         """ 
         依据：
@@ -206,7 +209,7 @@ class LeaderAgent(Agent):
         """
         doctors_answer_prompt = self.generate_doctors_prompt(doctor_responses, is_initial)
         if is_initial:
-            messages=[
+            messages = [
                 {"role": "system", "content": meta_summary_system},
                 {"role": "user", "content": meta_summary_user.render(patient_info=self.basic_info, doctor_info=doctors_answer_prompt)}
             ]
@@ -214,27 +217,27 @@ class LeaderAgent(Agent):
             self.current_report = ans['answer'] + "\n" + ans['report']
             return ans, messages, prompt_token, completion_token
         else:
-            messages=[
+            messages = [
                 {"role": "system", "content": collaborative_summary_system},
                 {"role": "user", "content": collaborative_summary_user.render(doctor_info=doctors_answer_prompt, latest_info=self.current_report)}
             ]
             ans, prompt_token, completion_token = self.invoke(messages)
             action = self.extract_action_response(ans)
-            self.current_report = ans['answer'] + "\n" + ans['report'] 
+            self.current_report = ans['answer'] + "\n" + ans['report']
             return action, ans, messages, prompt_token, completion_token
-    
+
     def generate_doctors_initial_prompt(self, doctor_responses: List[Dict]) -> str:
         responses = ""
         for idx in range(len(doctor_responses)):
             i = doctor_responses[idx]
             prompt = initial_doctor_for_revise.render(diagnosis=i['logit'], analysis=i['analysis'])
-            if idx < len(doctor_responses)-1:
-                response = "Doctor "+str(idx)+"'s statement is as following:\n"+prompt+"\n"
+            if idx < len(doctor_responses) - 1:
+                response = "Doctor " + str(idx) + "'s statement is as following:\n" + prompt + "\n"
             else:
-                response = "Doctor "+str(idx)+"'s statement is as following:\n"+prompt
+                response = "Doctor " + str(idx) + "'s statement is as following:\n" + prompt
             responses = responses + response
         return responses
-    
+
     def revise_logits(self, doctor_initial_responses) -> tuple[Dict[str, str], int, int]:
         doctors_answer_prompt = self.generate_doctors_initial_prompt(doctor_initial_responses)
         messages = [
@@ -243,7 +246,7 @@ class LeaderAgent(Agent):
         ]
         ans, prompt_token, completion_token = self.invoke(messages)
         return ans, prompt_token, completion_token
-    
+
     @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
     def invoke(self, messages: List[Dict[str, str]]) -> Dict[str, str]:
         start = time.time()
@@ -265,7 +268,7 @@ class LeaderAgent(Agent):
 
 
 class Collaboration():
-    def __init__(self, leader_agent: LeaderAgent, doctor_agents: List[DoctorAgent], leader_opinion: str, leader_report: str, save_dir: str, doctor_num: int=3, max_round: int=3):
+    def __init__(self, leader_agent: LeaderAgent, doctor_agents: List[DoctorAgent], leader_opinion: str, leader_report: str, save_dir: str, doctor_num: int = 3, max_round: int = 3):
         self.leader_opinion = leader_opinion
         self.leader_report = leader_report
         self.doctor_responses = []
@@ -284,16 +287,36 @@ class Collaboration():
         while self.now_round < self.max_round:
             self.now_round += 1
             self.doctor_responses = []
-            
-            for i, doctor in enumerate(self.doctor_agents):
-                response, messages, prompt_token, completion_token = doctor.collaboration(self.leader_opinion, self.leader_report)
+
+            def process_doctoragents(doctor_agent, i):
+                response, messages, prompt_token, completion_token = doctor_agent.collaboration(self.leader_opinion, self.leader_report)
                 self.doctor_responses.append(response)
                 json.dump(response, open(f"{self.save_dir}/doctor{i + 1}_round{self.now_round}_review.json", "w"))
                 json.dump(messages, open(f"{self.save_dir}/doctor{i + 1}_round{self.now_round}_review_messages.json", "w"))
                 with open(f"{self.save_dir}/doctor{i + 1}_round{self.now_round}_review_userprompt.txt", "w") as f:
                     f.write(messages[1]["content"])
-                prompt_tokens += prompt_token
-                completion_tokens += completion_token
+                return prompt_token, completion_token
+
+            with ThreadPoolExecutor(max_workers=self.doctor_num) as executor:
+                futures = [executor.submit(process_doctoragents, doctor_agent, i) for i, doctor_agent in enumerate(self.doctor_agents)]
+
+                for future in futures:
+                    prompt_token, completion_token = future.result()
+                    prompt_tokens += prompt_token
+                    completion_tokens += completion_token
+
+                # for i, doctor in enumerate(self.doctor_agents):
+                #     response, messages, prompt_token, completion_token = doctor.collaboration(
+                #         self.leader_opinion, self.leader_report)
+                #     self.doctor_responses.append(response)
+                #     json.dump(response, open(
+                #         f"{self.save_dir}/doctor{i + 1}_round{self.now_round}_review.json", "w"))
+                #     json.dump(messages, open(
+                #         f"{self.save_dir}/doctor{i + 1}_round{self.now_round}_review_messages.json", "w"))
+                #     with open(f"{self.save_dir}/doctor{i + 1}_round{self.now_round}_review_userprompt.txt", "w") as f:
+                #         f.write(messages[1]["content"])
+                #     prompt_tokens += prompt_token
+                #     completion_tokens += completion_token
 
             action, summary_content, messages, prompt_token, completion_token = self.leader_agent.summary(self.doctor_responses)
             json.dump(summary_content, open(f"{self.save_dir}/leader_round{self.now_round}_summary.json", "w"))
@@ -306,7 +329,7 @@ class Collaboration():
             if action == 0:
                 break
             print("continue to next round")
-        
+
         if self.now_round == self.max_round:
             print("No agreement has been reached")
         self.now_round = 0
@@ -323,7 +346,7 @@ def extract_and_parse_json(text: str):
         except json.JSONDecodeError:
             print(json_string)
             raise ValueError("Invalid JSON content found in match1.")
-    
+
     match = re.search(pattern_backticks, text.strip() + "\"]}```", re.DOTALL)
     if match:
         json_string = match.group(1).strip().replace("\n", "")
@@ -332,7 +355,7 @@ def extract_and_parse_json(text: str):
         except json.JSONDecodeError:
             print(json_string)
             raise ValueError("Invalid JSON content found in match 2.")
-    
+
     pattern_json_object = r'\{.*?\}'
     match = re.search(pattern_json_object, text, re.DOTALL)
     if match:
@@ -342,5 +365,5 @@ def extract_and_parse_json(text: str):
         except json.JSONDecodeError:
             print(json_string)
             raise ValueError("Invalid JSON content found in match 3.")
-    
+
     raise ValueError("No valid JSON content found.")
