@@ -1,9 +1,9 @@
-import ipdb
 import torch
 import torch.nn as nn
 
+
 class TransformerEncoderLayer(nn.Module):
-    def __init__(self, emb_dim, num_heads=4, hidden_dim=256):
+    def __init__(self, emb_dim, hidden_dim=128, num_heads=4):
         super(TransformerEncoderLayer, self).__init__()
 
         self.mha = nn.MultiheadAttention(
@@ -30,12 +30,12 @@ class TransformerEncoderLayer(nn.Module):
 
 
 class TransformerEncoder(nn.Module):
-    def __init__(self, emb_dim, num_heads=4, hidden_dim=256, num_layers=2):
+    def __init__(self, emb_dim, hidden_dim=128, num_heads=4, num_layers=2):
         super(TransformerEncoder, self).__init__()
 
         self.layers = nn.ModuleList(
             [
-                TransformerEncoderLayer(emb_dim, num_heads, hidden_dim)
+                TransformerEncoderLayer(emb_dim, hidden_dim, num_heads)
                 for _ in range(num_layers)
             ]
         )
@@ -44,26 +44,27 @@ class TransformerEncoder(nn.Module):
         for layer in self.layers:
             x = layer(x)
         return x
-    
-    
+
+
 class Merger(nn.Module):
-    def __init__(self, ehr_embed_dim, ehr_num, text_emb_dim, hidden_dim):
+    def __init__(self, ehr_embed_dim=128, ehr_num=3, text_emb_dim=1024, hidden_dim=128):
         super(Merger, self).__init__()
+        self.act = nn.GELU()
         self.layer = nn.Linear(ehr_embed_dim * ehr_num + text_emb_dim, hidden_dim)
-        self.act = nn.GELU() 
-    
+
     def forward(self, ehr_embs, text_emb):
-        emb = torch.cat(ehr_embs + [text_emb], dim=1)
-        emb = self.layer(emb)
+        ehr_embs.append(text_emb)
+        emb = torch.cat(ehr_embs, dim=1)
+        emb = self.act(self.layer(emb))
         return emb
 
 
 class Predictor(nn.Module):
-    def __init__(self, input_dim, output_dim=1):
+    def __init__(self, input_dim=128, output_dim=1):
         super(Predictor, self).__init__()
         self.layer = nn.Linear(input_dim, output_dim)
         self.sigmoid = nn.Sigmoid()
-        
+
     def forward(self, emb):
         emb = self.layer(emb)
         y = self.sigmoid(emb)
@@ -71,8 +72,8 @@ class Predictor(nn.Module):
 
 
 class Fusion(nn.Module):
-    def __init__(self, ehr_embed_dim, ehr_num, text_embed_dim, merge_embed_dim, output_dim=1):
-        super(Fusion, self).__init__()     
+    def __init__(self, ehr_embed_dim=128, ehr_num=3, text_embed_dim=1024, merge_embed_dim=128, output_dim=1):
+        super(Fusion, self).__init__()
         self.merge_layers = Merger(ehr_embed_dim, ehr_num, text_embed_dim, merge_embed_dim)
         self.predict_layers = Predictor(merge_embed_dim, output_dim)
 
