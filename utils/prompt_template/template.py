@@ -1,7 +1,7 @@
 from liquid import Template
 
 
-## Phase 1
+# Phase 1
 doctor_review_system = """You are an experienced doctor with extensive medical knowledge. I will provide you with multivariate time-series electronic health record for a patient, which is a structured collection of patient information comprising multiple clinical variables measured at various time points across multiple patient visits, represented as sequences of numerical values for each feature. I will also provide some AI model analyses for this patient, including mortality risk prediction results and feature importance weights. The mortality risk refers to the likelihood or probability of a patient dying within a specific timeframe. The greater the feature importance weight, the greater the impact of that feature on the patient's outcome. When the patient's risk of mortality is low, this impact is positive; conversely, when the risk is high, the impact is negative. I will also retrieve relevant medical knowledge based on the AI model's analysis results and provide it to you. Please summarize the patient's condition based on multivariate time-series electronic health record (especially the values at final time-point), mortality risk, feature importance weights and medical knowledge, and generate an analytical review for the patient."""
 
 doctor_review_user = Template("""Here is the relevant medical knowledge:
@@ -10,9 +10,9 @@ doctor_review_user = Template("""Here is the relevant medical knowledge:
 Here is the patient record, including the patient's basic information, multivariate time-series electronic health record and analysis results of AI models:
 {{hcontext}}
 
-You need to analyze the patient's overall condition based on the information above and generate an analytical review. Please output the following content in JSON format:
+You need to analyze the patient's overall condition based on the information above and generate an analytical review. Please pay great attention to the electronic health record at the final time-point and feature importance weights from AI models, and analyze based on them. Do not just list the patient's basic information or provide unsupported analysis. Use analytic reasoning to deduce the physiologic or biochemical pathophysiology of the patient and step by step identify the correct response. Please output the following content in JSON format:
 1. The patient's mortality risk from the AI model, just respond with a two-decimal number.
-2. Your analysis of the patient's condition. Please pay great attention to the electronic health record at the final time-point and feature importance weights from AI models, and analyze based on them. Do not just list the patient's basic information or provide unsupported analysis. Use analytic reasoning to deduce the physiologic or biochemical pathophysiology of the patient and step by step identify the correct response.
+2. Among the important features that AI models consider, analyze which features supporting and which opposing the prediction of mortality risk by AI models. 
 3. Choose reasonable evidence from the medical knowledge I provide to support your analysis. Please list titles and important content from the medical knowledge represented as a List of strings. Do not just list the titles of the medical knowledge.
 
 Here is an example of the format you should output:
@@ -22,7 +22,7 @@ Respond in JSON format without any additional content:
 """)
 
 
-## Phase 2
+# Phase 2
 meta_summary_system = """You are an authoritative expert in the medical field. You are organizing a collaborative consultation. Now several doctors have made analysis and judgments on a patient's condition. Your task is to analyze the rationality of each doctor's opinion, summarize the opinions to obtain a synthesized report for the patient and give your judgment on the patient's mortality risk. The mortality risk refers to the likelihood or probability of a patient dying within a specific timeframe. The greater the mortality risk, the higher the likelihood of the patient dying."""
 
 meta_summary_user = Template("""First, please read the patient's basic information carefully, as follows:
@@ -47,7 +47,7 @@ Respond in JSON format without any additional content:
 """)
 
 
-## Phase 3
+# Phase 3
 doctor_collaboration_system = """You are an experienced medical expert participating in a consultation with several other medical doctors for a patient. The meta doctor of this consultation has generated a synthesized report based on all doctors' analysis of the patient. Please provide your viewpoint on his opinion."""
 
 doctor_collaboration_user = Template("""Here is the relevant medical knowledge:
@@ -101,7 +101,7 @@ Here are two examples of the format you should output:
 
 Respond in JSON format without any additional content:
 """
-)
+                       )
 
 collaborative_summary_system = """You are an authoritative expert in the medical field. You are organizing a collaborative consultation. Now several doctors have made analysis and judgments on a patient's condition. Your task is to judge whether everyone has reached a consensus on the diagnosis of the patient based on the analysis statements of each doctor and then analyze the rationality of each doctor's opinion and summarize the opinions you think are reasonable to obtain a synthesized report for the patient."""
 
@@ -177,26 +177,26 @@ Respond in JSON format without any additional content:
 
 initial_doctor_for_revise = Template("""He thinks the mortality risk of the patient is: {{diagnosis}}.
 Then, he briefly analyzed the patient's basic condition: {{analysis}}"""
-)
+                                     )
 
 initial_doctor_summary = Template("""He thinks the mortality risk of the patient is: {{diagnosis}}.
 He first briefly analyzed the patient's basic condition: {{analysis}}
 Then, he listed some evidence as the basis for my diagnosis of this patient: {{evidence}}"""
-)
+                                  )
 
 doctor_vote_agree_certain = Template("""Regarding the summary report of the leader expert, I agree with the leader, with high confidence.
 The reason to support my statement is announced below:
 {{reason}}
 To further support my idea, I find the extra relevant documents listed below:
 {{documents}}"""
-)
+                                     )
 
 doctor_vote_agree_uncertain = Template("""Regarding the summary report of the leader expert, I agree with the leader, but am not very sure.
 The reason to support my statement is announced below:
 {{reason}}
 To further support my idea, I find the extra relevant documents listed below:
 {{documents}}"""
-)
+                                       )
 
 doctor_vote_disagree_certain = Template("""Regarding the summary report of the leader expert, I disagree with the leader, with high confidence.
 The reason to support my statement is announced below:
@@ -204,7 +204,7 @@ The reason to support my statement is announced below:
 To further support my idea, I find the extra relevant documents listed below:
 {{documents}}
 I think my opinions and evidence are very important for accurate judgments. I hope the leader expert can consider them more."""
-)
+                                        )
 
 doctor_vote_disagree_uncertain = Template("""Regarding the summary report of the leader expert, I disagree with the leader, but am not very sure.
 The reason to support my statement is announced below:
@@ -212,7 +212,7 @@ The reason to support my statement is announced below:
 To further support my idea, I find the extra relevant documents listed below:
 {{documents}}
 I have doubts about the summary report of the leader expert, but I am not sure about my own opinions either. I have listed some evidence as a supplementary reference."""
-)
+                                          )
 
 doctor_high_confidence = Template("""Regarding the summary report of the leader expert, I {{opinion}} with the leader.
 To further support my idea, I find the extra relevant documents listed below:
@@ -230,4 +230,4 @@ doctor_low_confidence = Template("""Regarding the summary report of the leader e
 To further support my idea, I find the extra relevant documents listed below:
 {{documents}}
 I have some knowledge of the subject area and is somewhat familiar with the medical domain. I understand the main points but may lack depth in certain areas. I am reasonably confident in my assessment but acknowledges some limitations in my expertise.
-""")        
+""")
