@@ -1,14 +1,13 @@
 import os
-from typing import List, Literal
+from typing import List
 
 import pandas as pd
 import numpy as np
-import ipdb
 
 from .datasets_info import *
 
 
-def get_data_from_files(data_url: str, task: str, model: str, mode: str, patient_index: int=0):
+def get_data_from_files(data_url: str, task: str, model: str, mode: str, patient_index: int = 0):
     y = None
     important_features = None
     total_y = None
@@ -54,15 +53,15 @@ def get_trend_desc(var: float):
         return "increased"
     else:
         return "decreased"
-    
-    
+
+
 def get_recommended_trend_desc(var: float):
     if var > 0:
         return "decrease"
     else:
         return "increase"
-    
-    
+
+
 def get_range_desc(key: str, var: float):
     if key in ["Weight", "Appetite"]:
         return ""
@@ -88,23 +87,23 @@ def get_death_desc(risk: float):
         return "a high level"
     else:
         return "an extremely high level"
-    
-    
+
+
 def get_distribution(data, values):
     arr = np.sort(np.array(values))
     index = np.searchsorted(arr, data, side='right')
     rank = index / len(arr) * 100
     if rank < 40:
-        return "at the bottom 40%% levels"
+        return "at the bottom 40% levels"
     elif rank < 70:
-        return "at the middle 30%% levels"
+        return "at the middle 30% levels"
     else:
-        return "at the top 30%% levels"
+        return "at the top 30% levels"
 
 
-def format_input_ehr(raw_x: np.array, features: List[str], lab_features: List[str]=None, record_time: List[List[str]]=None):
+def format_input_ehr(raw_x: np.array, features: List[str], lab_features: List[str] = None, record_time: List[List[str]] = None):
     ehr = ""
-    if lab_features is not None: # mimic-iv
+    if lab_features is not None:  # mimic-iv
         categorical_features = ['Capillary refill rate', 'Glascow coma scale eye opening', 'Glascow coma scale motor response', 'Glascow coma scale total', 'Glascow coma scale verbal response']
         for categorical_feature in categorical_features:
             indexes = [i for i, f in enumerate(lab_features) if f.startswith(categorical_feature)]
@@ -127,12 +126,12 @@ def format_input_ehr(raw_x: np.array, features: List[str], lab_features: List[st
         ehr += f"Unit: {medical_unit[feature]}. " if feature in medical_unit else ""
         ehr += f"Reference range for healthy people: {medical_standard[feature][0]} {medical_unit[feature]} to {medical_standard[feature][1]} {medical_unit[feature]}. " if feature in medical_standard else ""
         ehr += f"Reference range for ESRD patients: {medical_standard_for_esrd[feature]}.\n" if feature in medical_standard_for_esrd else "\n"
-    
+
     if record_time is not None:
         assert len(raw_x) == len(record_time), "The length of raw_x and record_time should be the same."
         ehr += "The patient's EHR data is recorded at the following time points:\n"
         ehr += ", ".join(record_time) + ".\n"
-    
+
     return ehr
 
 
@@ -154,7 +153,7 @@ def generate_prompt(dataset: str, data_url: str, patient_index: int, patient_id:
         gender = "male" if basic_data["Sex"] == 1 else "female"
         age = basic_data["Age"]
         basic_context = f"This {gender} patient, aged {age}, is an patient admitted with a diagnosis of COVID-19 or suspected COVID-19 infection.\n"
-    else: # [mimic-iii, mimic-iv]
+    else:  # [mimic-iii, mimic-iv]
         basic_context = '\n'
 
     models = ['LR', 'ConCare']
@@ -182,12 +181,11 @@ def generate_prompt(dataset: str, data_url: str, patient_index: int, patient_id:
                 last_visit += f'shap value of {round(float(value["attention"]), 3)}. '
             last_visit += f'The feature value is {round(value["value"], 2)}{key_unit}, which is {get_mean_desc(value["value"], survival_mean)} than the average value of survival patients ({round(survival_mean, 2)}{key_unit}), {get_mean_desc(value["value"], dead_mean)} than the average value of dead patients ({round(dead_mean, 2)}{key_unit}).\n'
         last_visit_context += last_visit + '\n'
-    
+
     # similar_patients = get_similar_patients(data_url, patient_id)
     # similar_context = "The AI model has found similar patients to the patient, including:\n"
     # for idx, patient in enumerate(similar_patients):
     #     similar_context += f"Patient {idx + 1}: {patient['gender']}, {patient['age']} years old, with original disease {patient['oriDisease']}{patient['basicDisease']}{patient['deathText']}.\n"
-
 
     subcontext = basic_context + last_visit_context
     hcontext = basic_context + '\n' + ehr_context + '\n' + last_visit_context
@@ -238,23 +236,23 @@ class ContextBuilder:
             basic_context += f"This {gender} patient, aged {age}, is an patient in Intensive Care Unit (ICU).\n"
         else:
             raise ValueError(f"Invalid dataset name: {self.dataset_name}")
-        
+
         _, raw_x, record_time, features, lab_features, note, total_y, y, important_features = get_data_from_files(self.dataset_dir, self.task, self.model_name, self.mode, patient_index)
-        
+
         if self.dataset_name in ['mimic-iv', 'mimic-iii']:
             raw_x = np.array(raw_x)[:, 2:]
             basic_context += f"Here is the clinical note of the patient:\n{note[:1024]}\n"
         elif self.dataset_name == 'esrd':
             raw_x = np.array(raw_x)
         elif self.dataset_name == 'cdsl':
-            raw_x =  np.array(raw_x)[:, 2:]
+            raw_x = np.array(raw_x)[:, 2:]
         else:
             raise ValueError(f"Invalid dataset name: {self.dataset_name}")
         ehr_context = "Here is multivariate time-series electronic health record data of the patient, a structured collection of patient information comprising multiple clinical variables measured at various time points across multiple patient visits, represented as sequences of numerical values for each feature.\n" + format_input_ehr(raw_x, features, lab_features, record_time)
-        
+
         if is_baseline:
             return basic_context + '\n' + ehr_context
-        
+
         last_visit = f"The mortality prediction risk for the patient from {self.model_name} model is {round(float(y), 2)} out of 1.0. The risk is {get_distribution(y, total_y)} among all ESRD patients. Our model especially pays great attention to the following features:\n"
 
         survival_stats = pd.read_pickle(os.path.join(self.dataset_dir, 'survival.pkl'))
@@ -266,19 +264,19 @@ class ContextBuilder:
             survival_mean = survival_stats[key]['50%']
             dead_mean = dead_stats[key]['50%']
             key_name = medical_name[key] if key in medical_name else key
-            if self.dataset_name == 'esrd':            
+            if self.dataset_name == 'esrd':
                 key_unit = ' ' + medical_unit[key] if key in medical_unit else ''
             elif self.dataset_name == 'mimic-iv':
                 key_unit = ' ' + mimic_unit[key] if key in mimic_unit else ''
             else:
                 key_unit = ''
             last_visit += f'{key_name}: with '
-            if self.model_name in ['ConCare', 'AdaCare', 'RETAIN']:
-                last_visit += f'importance weight of {round(float(value["attention"]), 3)} out of 1.0. '
-            else:
-                last_visit += f'SHAP value of {round(float(value["attention"]), 3)}. '
+            # if self.model_name in ['ConCare', 'AdaCare', 'RETAIN']:
+            last_visit += f'importance weight of {round(float(value["attention"]), 3)} out of 1.0. '
+            # else:
+            # last_visit += f'SHAP value of {round(float(value["attention"]), 3)}. '
             last_visit += f'The feature value is {round(value["value"], 2)}{key_unit}, which is {get_mean_desc(value["value"], survival_mean)} than the median value of survival patients ({round(survival_mean, 2)}{key_unit}), {get_mean_desc(value["value"], dead_mean)} than the median value of deceased patients ({round(dead_mean, 2)}{key_unit}). '
-            if self.dataset_name == 'esrd':            
+            if self.dataset_name == 'esrd':
                 last_visit += f"The reference range for healthy people is {medical_standard[key][0]}{key_unit} to {medical_standard[key][1]}{key_unit}. " if key in medical_standard else ""
                 last_visit += f"The reference range for ESRD patients is {medical_standard_for_esrd[key]}.\n" if key in medical_standard_for_esrd else "\n"
             elif self.dataset_name == 'mimic-iv':
