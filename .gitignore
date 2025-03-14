@@ -1,7 +1,7 @@
 # New
 ehr_datasets/
 pyehr/ehrdatasets/
-graphrag/
+!pyehr/ehrdatasets/loader/
 logs/
 response/
 corpus/
@@ -9,17 +9,15 @@ retriever/
 output/
 output_bk/
 lm/
-cost/
-PrimeNet/
-Warpformer/
 *.ipynb
 *.csv
-hparams.py
 perf.py
 config.py
 baseline_results/
 baseline_results_tmp/
 baseline_results_old/
+test/
+rebuttal/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
