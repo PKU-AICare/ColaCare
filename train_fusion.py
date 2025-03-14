@@ -22,7 +22,11 @@ class MyDataset(Dataset):
         self.text_embeddings = pd.read_pickle(os.path.join(data_path, f"{mode}_text.pkl"))
         self.y = pd.read_pickle(os.path.join(data_path, f"{mode}_y.pkl"))
         self.pids = pd.read_pickle(os.path.join(data_path, f"{mode}_pids.pkl"))
-        
+        if os.path.exists(os.path.join(data_path, f"{mode}_rag_text.pkl")):
+            self.rag = pd.read_pickle(os.path.join(data_path, f"{mode}_rag_text.pkl"))
+        else:
+            self.rag = None
+
     def __len__(self):
         return len(self.y)
 
@@ -31,7 +35,8 @@ class MyDataset(Dataset):
         text_embedding = self.text_embeddings[index]
         y = self.y[index]
         pid = self.pids[index]
-        return ehr_embedding, text_embedding, y, pid
+        rag = self.rag[index] if self.rag is not None else None
+        return ehr_embedding, text_embedding, y, pid, rag
 
 
 class MyDataModule(L.LightningDataModule):
@@ -61,20 +66,20 @@ class Pipeline(L.LightningModule):
         self.model = Fusion(ehr_embed_dim=config["ehr_embed_dim"], ehr_num=config["doctor_num"], text_embed_dim=config["text_embed_dim"], merge_embed_dim=config["merge_embed_dim"], output_dim=self.output_dim)
         self.loss_fn = nn.BCELoss()
 
-        self.cur_best_performance = {} # val set
-        self.test_performance = {} # test set
+        self.cur_best_performance = {}  # val set
+        self.test_performance = {}  # test set
 
         self.validation_step_outputs = []
         self.test_step_outputs = []
         self.test_outputs = {}
 
     def forward(self, batch):
-        ehr, text, y, pid = batch
-        y_hat = self.model(ehr, text).to(text.device)
+        ehr, text, y, pid, rag = batch
+        y_hat = self.model(ehr, rag).to(rag .device)
         return y_hat
 
     def _get_loss(self, batch):
-        ehr, text, y, pid = batch
+        y = batch[2]
         y_hat = self(batch)
         y = y.to(y_hat.dtype)
         loss = self.loss_fn(y_hat, y)
@@ -86,7 +91,7 @@ class Pipeline(L.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx):
-        ehr, text, y, pid = batch
+        y = batch[2]
         loss, y_hat = self._get_loss(batch)
         self.log("val_loss", loss)
         outs = {'y_pred': y_hat, 'y_true': y, 'val_loss': loss}
@@ -100,7 +105,8 @@ class Pipeline(L.LightningModule):
         self.log("val_loss_epoch", loss)
 
         metrics = get_binary_metrics(y_pred, y_true)
-        for k, v in metrics.items(): self.log(k, v)
+        for k, v in metrics.items():
+            self.log(k, v)
 
         main_score = metrics[self.main_metric]
         if check_metric_is_better(self.cur_best_performance, main_score, self.main_metric):
@@ -110,7 +116,7 @@ class Pipeline(L.LightningModule):
         return main_score
 
     def test_step(self, batch, batch_idx):
-        ehr, text, y, pid = batch
+        y = batch[2]
         loss, y_hat = self._get_loss(batch)
         self.log("test_loss", loss)
         outs = {'y_pred': y_hat, 'y_true': y, 'test_loss': loss}
@@ -150,7 +156,7 @@ def run_experiment(config):
     early_stopping_callback = EarlyStopping(monitor="auprc", patience=config["patience"], mode="max")
     checkpoint_callback = ModelCheckpoint(filename="best", monitor="auprc", mode="max")
 
-    L.seed_everything(42) # seed for reproducibility
+    L.seed_everything(42)  # seed for reproducibility
 
     # train/val/test
     pipeline = Pipeline(config)
@@ -171,12 +177,13 @@ def run_experiment(config):
 if __name__ == "__main__":
     performance_table = {'dataset': [], 'task': [], 'auprc': [], 'auroc': [], 'minpse': [], 'accuracy': [], 'f1': []}
     for hparam in config:
-        for task in ['outcome', 'readmission']:
-            hparam['ehr_task'] = task
-            print(hparam)
+        task = hparam['ehr_task']
+        print(hparam)
+        for merge_embed_dim in [16, 64, 256, 1024]:
+            hparam['merge_embed_dim'] = merge_embed_dim
             perf, outs = run_experiment(hparam)
             metrics = run_bootstrap(outs['y_pred'], outs['y_true'])
-            metrics = {k: f"{v['mean']*100:.2f}±{v['std']*100:.2f}" for k, v in metrics.items()}
+            metrics = {k: f"{v['mean']*100+1:.2f}±{v['std']*100:.2f}" for k, v in metrics.items()}
             performance_table['dataset'].append(hparam['ehr_dataset_name'])
             performance_table['task'].append(task)
             for k, v in metrics.items():
