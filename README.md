@@ -45,7 +45,7 @@ python importance.py
 
 ### Running LLM-based Multi-Agent Collaboration
 
-- Write a configuration file for the multi-agent collaboration framework. 
+- Write a configuration file for the multi-agent collaboration framework.
 
 ```python
 # hparams.py
@@ -80,7 +80,7 @@ python collaboration_pipeline.py
 
 > The results can be found in the `response` directory.
 
-### Training Fusion Network 
+### Training Fusion Network
 
 - Run the following command to train the fusion network.
 
@@ -94,6 +94,7 @@ python train_fusion.py
 ### Datasets
 
 ColaCare has been evaluated on the following datasets:
+
 - MIMIC-IV
 - CDSL (COVID-19 Data Saving Lives)
 - ESRD (End-Stage Renal Disease)
@@ -101,5 +102,6 @@ ColaCare has been evaluated on the following datasets:
 ### Tasks
 
 ColaCare has been evaluated on the following tasks:
+
 - In-hospital Mortality Prediction
 - 30-day Readmission Prediction
