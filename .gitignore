@@ -18,6 +18,7 @@ baseline_results_tmp/
 baseline_results_old/
 test/
 rebuttal/
+.DS_Store
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
