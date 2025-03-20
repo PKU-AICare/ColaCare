@@ -2,7 +2,9 @@
 
 ColaCare is a framework that enhances Electronic Health Record (EHR) modeling by leveraging Large Language Model (LLM)-driven multi-agent collaboration. This project aims to improve clinical prediction tasks by combining the strengths of domain-specific expert models and general-purpose LLMs.
 
-[[📑Paper](https://arxiv.org/pdf/2410.02551)]
+## What's New
+
+🎉 [20 January 2025] Our [Paper](https://arxiv.org/pdf/2410.02551) is accepted by WWW 2025!
 
 ## Key Features
 
