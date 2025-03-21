@@ -12,7 +12,6 @@ lm/
 *.ipynb
 *.csv
 perf.py
-config.py
 baseline_results/
 baseline_results_tmp/
 baseline_results_old/

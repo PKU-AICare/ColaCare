@@ -14,7 +14,7 @@ from tenacity import (
 from utils.framework import *
 from utils.retrieve_utils import RetrievalSystem
 from utils.healthcare_context_utils import ContextBuilder
-from utils.config import deep_config, v1_config, v2_config, default_config
+from utils.config import deepseek_config, v1_config, v2_config, default_config
 from utils.prompt_template.template import *
 
 
@@ -26,23 +26,19 @@ class Agent:
     ) -> None:
         self.role = role
         self.llm_name = llm_name
+
+        # Set the llm_config according to your api_key and your need.
         if llm_name == "deepseek-chat":
-            self.llm_config = deep_config
+            self.llm_config = deepseek_config
         elif "gpt" in llm_name.lower():
             self.llm_config = v1_config
         elif "qwen" in llm_name.lower() or "doubao" in llm_name.lower() or "claude" in llm_name.lower():
             self.llm_config = v2_config
         elif "llama" in llm_name.lower():
             self.llm_config = default_config
+
         self.client = OpenAI(
             api_key=self.llm_config["api_key"], base_url=self.llm_config["api_base"])
-        self.conversation_history: List[Dict[str, str]] = []
-
-    def add_message(self, role: str, content: str):
-        self.conversation_history.append({"role": role, "content": content})
-
-    def clear_history(self):
-        self.conversation_history.clear()
 
 
 class DoctorAgent(Agent):
